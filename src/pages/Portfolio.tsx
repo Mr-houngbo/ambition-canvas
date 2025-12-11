@@ -1,12 +1,35 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Share2, Sparkles } from 'lucide-react';
+import { Share2, Sparkles, Loader2 } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProjectCard from '@/components/projects/ProjectCard';
-import { useProjectStore } from '@/store/projectStore';
+import { projectService } from '@/services/projectService';
+import { useToast } from '@/hooks/use-toast';
+import { Project } from '@/types/project';
 
 const Portfolio = () => {
-  const { projects } = useProjectStore();
-  const publicProjects = projects.filter((p) => p.est_public);
+  const { toast } = useToast();
+  const [publicProjects, setPublicProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPublicProjects = async () => {
+      try {
+        const data = await projectService.getPublic();
+        setPublicProjects(data);
+      } catch (error) {
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de charger le portfolio.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPublicProjects();
+  }, [toast]);
 
   return (
     <Layout>
@@ -30,8 +53,13 @@ const Portfolio = () => {
           </p>
         </motion.div>
 
-        {/* Projects Grid */}
-        {publicProjects.length > 0 ? (
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Chargement du portfolio...</p>
+          </div>
+        ) : publicProjects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {publicProjects.map((project, index) => (
               <ProjectCard key={project.id} project={project} index={index} />

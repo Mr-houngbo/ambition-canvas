@@ -8,10 +8,10 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  ExternalLink,
   Target,
   Lightbulb,
   Link as LinkIcon,
+  Loader2,
 } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -30,52 +30,110 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useProjectStore } from '@/store/projectStore';
 import { useToast } from '@/hooks/use-toast';
+import { projectService } from '@/services/projectService';
 import {
   STATUS_LABELS,
   STATUS_COLORS,
   HORIZON_LABELS,
   HORIZON_COLORS,
+  Project,
 } from '@/types/project';
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { projects, updateProject, deleteProject } = useProjectStore();
-
-  const project = projects.find((p) => p.id === id);
+  const { updateProject, deleteProject } = useProjectStore();
+  const [project, setProject] = useState<Project | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!project) {
+    const fetchProject = async () => {
+      if (!id) return;
+
+      try {
+        const data = await projectService.getById(id);
+        if (!data) {
+          toast({
+            title: 'Projet introuvable',
+            description: "Ce projet n'existe pas.",
+            variant: 'destructive',
+          });
+          navigate('/');
+          return;
+        }
+        setProject(data);
+      } catch (error) {
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de charger le projet.',
+          variant: 'destructive',
+        });
+        navigate('/');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProject();
+  }, [id, navigate, toast]);
+
+  const handleTogglePublic = async () => {
+    if (!project) return;
+
+    try {
+      const updated = await projectService.update(project.id, {
+        est_public: !project.est_public,
+      });
+      setProject(updated);
+      updateProject(project.id, { est_public: updated.est_public });
       toast({
-        title: 'Projet introuvable',
-        description: 'Ce projet n\'existe pas.',
+        title: updated.est_public ? 'Projet public' : 'Projet privé',
+        description: updated.est_public
+          ? 'Ce projet est maintenant visible dans le portfolio.'
+          : "Ce projet n'est plus visible dans le portfolio.",
+      });
+    } catch (error) {
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de modifier la visibilité.',
         variant: 'destructive',
       });
-      navigate('/');
     }
-  }, [project, navigate, toast]);
-
-  const handleTogglePublic = () => {
-    if (!project) return;
-    updateProject(project.id, { est_public: !project.est_public });
-    toast({
-      title: project.est_public ? 'Projet privé' : 'Projet public',
-      description: project.est_public
-        ? 'Ce projet n\'est plus visible dans le portfolio.'
-        : 'Ce projet est maintenant visible dans le portfolio.',
-    });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!project) return;
-    deleteProject(project.id);
-    toast({
-      title: 'Projet supprimé',
-      description: 'Le projet a été supprimé définitivement.',
-    });
-    navigate('/');
+
+    try {
+      if (project.image_url) {
+        await projectService.deleteImage(project.image_url);
+      }
+      await projectService.delete(project.id);
+      deleteProject(project.id);
+      toast({
+        title: 'Projet supprimé',
+        description: 'Le projet a été supprimé définitivement.',
+      });
+      navigate('/');
+    } catch (error) {
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer le projet.',
+        variant: 'destructive',
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container flex items-center justify-center py-20">
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
 
   if (!project) {
     return null;
@@ -101,17 +159,13 @@ const ProjectDetail = () => {
               </div>
             </div>
           )}
-          
+
           {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
 
           {/* Back button */}
           <div className="absolute top-4 left-4">
-            <Button
-              variant="glass"
-              size="sm"
-              onClick={() => navigate(-1)}
-            >
+            <Button variant="glass" size="sm" onClick={() => navigate(-1)}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Retour
             </Button>
@@ -119,11 +173,7 @@ const ProjectDetail = () => {
 
           {/* Actions */}
           <div className="absolute top-4 right-4 flex gap-2">
-            <Button
-              variant="glass"
-              size="icon-sm"
-              onClick={handleTogglePublic}
-            >
+            <Button variant="glass" size="icon-sm" onClick={handleTogglePublic}>
               {project.est_public ? (
                 <Eye className="w-4 h-4" />
               ) : (
@@ -145,7 +195,8 @@ const ProjectDetail = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Supprimer ce projet?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Cette action est irréversible. Le projet sera définitivement supprimé.
+                    Cette action est irréversible. Le projet sera définitivement
+                    supprimé.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -173,7 +224,10 @@ const ProjectDetail = () => {
                 <Badge className={STATUS_COLORS[project.statut]}>
                   {STATUS_LABELS[project.statut]}
                 </Badge>
-                <Badge variant="secondary" className={HORIZON_COLORS[project.horizon_temps]}>
+                <Badge
+                  variant="secondary"
+                  className={HORIZON_COLORS[project.horizon_temps]}
+                >
                   {HORIZON_LABELS[project.horizon_temps]}
                 </Badge>
                 <span className="text-sm font-medium text-primary uppercase tracking-wider">
@@ -198,7 +252,7 @@ const ProjectDetail = () => {
               </p>
 
               {/* Tags */}
-              {project.tags.length > 0 && (
+              {project.tags && project.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6">
                   {project.tags.map((tag) => (
                     <span key={tag} className="tag-chip">
@@ -212,7 +266,8 @@ const ProjectDetail = () => {
               <div className="flex items-center gap-2 text-sm text-muted-foreground pt-4 border-t border-border">
                 <Calendar className="w-4 h-4" />
                 <span>
-                  Créé le {new Date(project.date_creation).toLocaleDateString('fr-FR', {
+                  Créé le{' '}
+                  {new Date(project.date_creation).toLocaleDateString('fr-FR', {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric',
