@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const AUTH_KEY = 'app_authenticated';
-const APP_PASSWORD = 'projets2025'; // Mot de passe par défaut - à changer
+const APP_PASSWORD = 'ideora@2025'; // Mot de passe par défaut - à changer
 
 export const useSimpleAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
