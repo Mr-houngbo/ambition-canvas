@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      projets: {
+        Row: {
+          categorie: string | null
+          date_creation: string
+          description_courte: string | null
+          description_detaillee: string | null
+          est_public: boolean | null
+          horizon_temps: string | null
+          id: string
+          image_url: string | null
+          motivation: string | null
+          ressources: string | null
+          statut: string | null
+          tags: string[] | null
+          titre: string
+        }
+        Insert: {
+          categorie?: string | null
+          date_creation?: string
+          description_courte?: string | null
+          description_detaillee?: string | null
+          est_public?: boolean | null
+          horizon_temps?: string | null
+          id?: string
+          image_url?: string | null
+          motivation?: string | null
+          ressources?: string | null
+          statut?: string | null
+          tags?: string[] | null
+          titre: string
+        }
+        Update: {
+          categorie?: string | null
+          date_creation?: string
+          description_courte?: string | null
+          description_detaillee?: string | null
+          est_public?: boolean | null
+          horizon_temps?: string | null
+          id?: string
+          image_url?: string | null
+          motivation?: string | null
+          ressources?: string | null
+          statut?: string | null
+          tags?: string[] | null
+          titre?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

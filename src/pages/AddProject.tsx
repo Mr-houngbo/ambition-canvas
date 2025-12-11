@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { v4 as uuidv4 } from 'uuid';
 import Layout from '@/components/layout/Layout';
 import ProjectForm from '@/components/projects/ProjectForm';
 import { useProjectStore } from '@/store/projectStore';
 import { useToast } from '@/hooks/use-toast';
-import { ProjectFormData, Project } from '@/types/project';
+import { ProjectFormData } from '@/types/project';
+import { projectService } from '@/services/projectService';
 
 const AddProject = () => {
   const navigate = useNavigate();
@@ -17,21 +17,16 @@ const AddProject = () => {
     setIsLoading(true);
 
     try {
-      // For now, we'll use a placeholder for image handling
-      // This will be connected to Supabase Storage later
       let imageUrl = data.image_url;
 
       if (imageFile) {
-        // Create a local URL for demonstration
-        imageUrl = URL.createObjectURL(imageFile);
+        imageUrl = await projectService.uploadImage(imageFile);
       }
 
-      const newProject: Project = {
+      const newProject = await projectService.create({
         ...data,
-        id: uuidv4(),
-        date_creation: new Date().toISOString(),
         image_url: imageUrl,
-      };
+      });
 
       addProject(newProject);
 
@@ -42,6 +37,7 @@ const AddProject = () => {
 
       navigate('/');
     } catch (error) {
+      console.error('Error creating project:', error);
       toast({
         title: 'Erreur',
         description: 'Impossible de créer le projet.',
