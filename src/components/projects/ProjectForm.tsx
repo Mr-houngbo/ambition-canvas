@@ -29,16 +29,17 @@ interface ProjectFormProps {
   initialData?: Project;
   onSubmit: (data: ProjectFormData, imageFile?: File) => Promise<void>;
   isLoading?: boolean;
+  defaultCategory?: string;
 }
 
-const ProjectForm = ({ initialData, onSubmit, isLoading }: ProjectFormProps) => {
+const ProjectForm = ({ initialData, onSubmit, isLoading, defaultCategory }: ProjectFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<ProjectFormData>({
     titre: initialData?.titre || '',
-    categorie: initialData?.categorie || CATEGORIES[0],
+    categorie: initialData?.categorie || defaultCategory || CATEGORIES[0],
     description_courte: initialData?.description_courte || '',
     description_detaillee: initialData?.description_detaillee || '',
     statut: initialData?.statut || 'idee',

@@ -1,12 +1,15 @@
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useProjectStore } from '@/store/projectStore';
-import { STATUS_LABELS, HORIZON_LABELS, CATEGORIES, ProjectStatus, TimeHorizon } from '@/types/project';
+import { STATUS_LABELS, HORIZON_LABELS, CATEGORIES_ENTREPRISE, CATEGORIES_EDUCATION, ProjectStatus, TimeHorizon } from '@/types/project';
 import { cn } from '@/lib/utils';
 
-const ProjectFilters = () => {
+interface ProjectFiltersProps {
+  filterType?: 'entreprise' | 'education';
+}
+
+const ProjectFilters = ({ filterType = 'entreprise' }: ProjectFiltersProps) => {
   const { filters, setFilter, resetFilters } = useProjectStore();
 
   const statuses: Array<{ value: ProjectStatus | 'all'; label: string }> = [
@@ -25,7 +28,8 @@ const ProjectFilters = () => {
     })),
   ];
 
-  const categories = ['all', ...CATEGORIES];
+  const categoryList = filterType === 'education' ? CATEGORIES_EDUCATION : CATEGORIES_ENTREPRISE;
+  const categories = ['all', ...categoryList];
 
   const hasActiveFilters =
     filters.search !== '' ||

@@ -47,13 +47,25 @@ export const HORIZON_COLORS: Record<TimeHorizon, string> = {
   long_terme: 'bg-secondary text-secondary-foreground',
 };
 
-export const CATEGORIES = [
+export const CATEGORIES_ENTREPRISE = [
   'Tech',
   'Business',
   'Créatif',
   'Personnel',
-  'Éducation',
   'Santé',
   'Social',
   'Autre',
 ];
+
+export const CATEGORIES_EDUCATION = [
+  'Master',
+  'Certification',
+  'Formation',
+  'Cours en ligne',
+  'Bootcamp',
+];
+
+export const CATEGORIES = [...CATEGORIES_ENTREPRISE, ...CATEGORIES_EDUCATION];
+
+export const isEducationCategory = (category: string): boolean => 
+  CATEGORIES_EDUCATION.includes(category);

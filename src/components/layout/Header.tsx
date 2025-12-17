@@ -1,12 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, FolderOpen, Share2 } from 'lucide-react';
+import { Sparkles, Briefcase, GraduationCap, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Header = () => {
   const location = useLocation();
 
   const navLinks = [
-    { path: '/', label: 'Projets', icon: FolderOpen },
+    { path: '/', label: 'Entreprise', icon: Briefcase },
+    { path: '/education', label: 'Éducation', icon: GraduationCap },
     { path: '/portfolio', label: 'Portfolio', icon: Share2 },
   ];
 
