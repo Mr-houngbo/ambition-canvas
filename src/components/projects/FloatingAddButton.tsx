@@ -2,9 +2,15 @@ import { Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
-const FloatingAddButton = () => {
+interface FloatingAddButtonProps {
+  defaultCategory?: string;
+}
+
+const FloatingAddButton = ({ defaultCategory }: FloatingAddButtonProps) => {
+  const to = defaultCategory ? `/ajouter?category=${encodeURIComponent(defaultCategory)}` : '/ajouter';
+  
   return (
-    <Link to="/ajouter">
+    <Link to={to}>
       <Button
         variant="floating"
         size="icon-xl"

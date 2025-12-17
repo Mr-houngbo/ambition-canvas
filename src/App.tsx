@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import Index from "./pages/Index";
+import Education from "./pages/Education";
 import AddProject from "./pages/AddProject";
 import EditProject from "./pages/EditProject";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -27,6 +28,7 @@ const AuthenticatedApp = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/education" element={<Education />} />
         <Route path="/ajouter" element={<AddProject />} />
         <Route path="/edit/:id" element={<EditProject />} />
         <Route path="/projet/:id" element={<ProjectDetail />} />

@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import ProjectForm from '@/components/projects/ProjectForm';
 import { useProjectStore } from '@/store/projectStore';
 import { useToast } from '@/hooks/use-toast';
-import { ProjectFormData } from '@/types/project';
+import { ProjectFormData, isEducationCategory } from '@/types/project';
 import { projectService } from '@/services/projectService';
 
 const AddProject = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const defaultCategory = searchParams.get('category') || undefined;
   const { toast } = useToast();
   const { addProject } = useProjectStore();
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +37,12 @@ const AddProject = () => {
         description: 'Votre projet a été ajouté avec succès.',
       });
 
-      navigate('/');
+      // Navigate back to the appropriate page based on category
+      if (isEducationCategory(data.categorie)) {
+        navigate('/education');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       console.error('Error creating project:', error);
       toast({
@@ -58,7 +65,7 @@ const AddProject = () => {
           </p>
         </div>
 
-        <ProjectForm onSubmit={handleSubmit} isLoading={isLoading} />
+        <ProjectForm onSubmit={handleSubmit} isLoading={isLoading} defaultCategory={defaultCategory} />
       </div>
     </Layout>
   );
