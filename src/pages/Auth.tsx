@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Lock, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -22,7 +22,6 @@ const Auth = ({ onAuthenticated, login }: AuthProps) => {
     setError('');
     setIsLoading(true);
 
-    // Petit délai pour l'effet visuel
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const success = login(password);
@@ -42,41 +41,69 @@ const Auth = ({ onAuthenticated, login }: AuthProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
-      {/* Background decorative elements */}
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background */}
+      <div className="absolute inset-0" style={{ background: 'var(--gradient-mesh)' }} />
+      
+      {/* Decorative orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <motion.div 
+          className="absolute w-[500px] h-[500px] rounded-full blur-[100px] opacity-40"
+          style={{ background: 'hsl(var(--primary) / 0.5)', top: '-20%', left: '-10%' }}
+          animate={{ 
+            x: [0, 50, 0],
+            y: [0, 30, 0],
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute w-[400px] h-[400px] rounded-full blur-[100px] opacity-30"
+          style={{ background: 'hsl(var(--accent) / 0.5)', bottom: '-15%', right: '-5%' }}
+          animate={{ 
+            x: [0, -30, 0],
+            y: [0, -40, 0],
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        />
+        <motion.div 
+          className="absolute w-[300px] h-[300px] rounded-full blur-[80px] opacity-25"
+          style={{ background: 'hsl(var(--academic) / 0.5)', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+          animate={{ 
+            scale: [1, 1.2, 1],
+          }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        />
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-md relative"
+        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-md relative z-10"
       >
-        <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-3xl p-8 shadow-2xl shadow-primary/5">
+        <div className="bg-card/60 backdrop-blur-3xl border border-border/30 rounded-[2rem] p-10 shadow-2xl shadow-primary/10">
           {/* Logo/Icon */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="w-20 h-20 mx-auto mb-8 bg-gradient-to-br from-primary to-primary/70 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30"
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 150, damping: 15 }}
+            className="w-24 h-24 mx-auto mb-10 rounded-3xl flex items-center justify-center shadow-xl"
+            style={{ background: 'var(--gradient-primary)' }}
           >
-            <Lock className="w-10 h-10 text-primary-foreground" />
+            <Lock className="w-12 h-12 text-primary-foreground" />
           </motion.div>
 
           {/* Title */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-center mb-8"
+            className="text-center mb-10"
           >
-            <h1 className="text-2xl font-bold text-foreground mb-2">
-              Espace Privé
+            <h1 className="text-3xl font-bold mb-3">
+              <span className="gradient-text">Espace Privé</span>
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground">
               Entrez le mot de passe pour accéder à vos projets
             </p>
           </motion.div>
@@ -97,7 +124,7 @@ const Auth = ({ onAuthenticated, login }: AuthProps) => {
                     setPassword(e.target.value);
                     setError('');
                   }}
-                  className={`h-14 pl-5 pr-12 text-base bg-background/50 border-border/50 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all ${
+                  className={`h-14 pl-5 pr-14 text-base bg-background/50 border-border/50 rounded-2xl focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all ${
                     error ? 'border-destructive focus:border-destructive focus:ring-destructive/20' : ''
                   }`}
                   autoFocus
@@ -105,7 +132,7 @@ const Auth = ({ onAuthenticated, login }: AuthProps) => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
                 >
                   {showPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -119,7 +146,7 @@ const Auth = ({ onAuthenticated, login }: AuthProps) => {
                 <motion.p
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-destructive text-sm mt-2 ml-1"
+                  className="text-destructive text-sm mt-3 ml-1 font-medium"
                 >
                   {error}
                 </motion.p>
@@ -134,13 +161,14 @@ const Auth = ({ onAuthenticated, login }: AuthProps) => {
               <Button
                 type="submit"
                 disabled={!password || isLoading}
-                className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25 transition-all duration-300 group"
+                variant="gradient"
+                className="w-full h-14 text-base font-semibold rounded-2xl shadow-xl shadow-primary/25 transition-all duration-300 group"
               >
                 {isLoading ? (
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"
+                    className="w-6 h-6 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"
                   />
                 ) : (
                   <>
@@ -154,14 +182,15 @@ const Auth = ({ onAuthenticated, login }: AuthProps) => {
         </div>
 
         {/* Footer hint */}
-        <motion.p
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
-          className="text-center text-muted-foreground/60 text-xs mt-6"
+          className="flex items-center justify-center gap-2 text-muted-foreground/50 text-sm mt-8"
         >
-          Gestionnaire de projets personnel
-        </motion.p>
+          <Sparkles className="w-4 h-4" />
+          <span>Ambition — Gestionnaire de projets</span>
+        </motion.div>
       </motion.div>
     </div>
   );
