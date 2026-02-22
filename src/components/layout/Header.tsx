@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, Briefcase, GraduationCap, Share2, LogOut } from 'lucide-react';
+import { Sparkles, Briefcase, GraduationCap, Share2, LogOut, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/hooks/useSimpleAuth';
@@ -12,6 +12,7 @@ const Header = () => {
   const navLinks = [
     { path: '/', label: 'Entreprise', icon: Briefcase, color: 'primary' },
     { path: '/education', label: 'Académique', icon: GraduationCap, color: 'academic' },
+    { path: '/projet-houefa', label: 'Houefa', icon: Building2, color: 'houefa' },
     { path: '/portfolio', label: 'Portfolio', icon: Share2, color: 'accent' },
   ];
 
@@ -51,6 +52,8 @@ const Header = () => {
                         ? "bg-academic/10 text-academic"
                         : link.color === 'accent'
                         ? "bg-accent/10 text-accent"
+                        : link.color === 'houefa'
+                        ? "bg-emerald-500/10 text-emerald-600"
                         : "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary/80"
                   )}
@@ -64,7 +67,7 @@ const Header = () => {
                       layoutId="nav-indicator"
                       className={cn(
                         "absolute -bottom-0.5 left-3 right-3 h-0.5 rounded-full",
-                        link.color === 'academic' ? "bg-academic" : link.color === 'accent' ? "bg-accent" : "bg-primary"
+                        link.color === 'academic' ? "bg-academic" : link.color === 'accent' ? "bg-accent" : link.color === 'houefa' ? "bg-emerald-500" : "bg-primary"
                       )}
                       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                     />
