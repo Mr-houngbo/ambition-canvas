@@ -71,7 +71,7 @@ const Header = () => {
                       layoutId="nav-indicator"
                       className={cn(
                         "absolute -bottom-0.5 left-3 right-3 h-0.5 rounded-full",
-                        link.color === 'academic' ? "bg-academic" : link.color === 'accent' ? "bg-accent" : link.color === 'houefa' ? "bg-emerald-500" : "bg-primary"
+                        link.color === 'academic' ? "bg-academic" : link.color === 'accent' ? "bg-accent" : (link.color === 'houefa' || link.color === 'vision') ? "bg-emerald-500" : "bg-primary"
                       )}
                       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                     />
