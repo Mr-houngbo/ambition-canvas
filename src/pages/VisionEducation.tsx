@@ -120,6 +120,29 @@ const diagnosticStats = [
   { value: '45', suffix: '%', label: 'de fuite des cerveaux parmi les diplômés du supérieur', size: 'text-7xl' },
 ];
 
+const StatCard = ({ stat, index }: { stat: typeof diagnosticStats[0]; index: number }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+  const count = useCountUp(parseInt(stat.value), 2000, isInView);
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 30 }}
+      animate={isInView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.6, delay: index * 0.15 }}
+      className="relative p-8 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm group hover:border-emerald-200 transition-colors duration-500"
+    >
+      <div className="absolute top-4 right-4 font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">
+        Stat 0{index + 1}
+      </div>
+      <p className={`${stat.size} font-extrabold text-foreground leading-none mb-4`}>
+        {count}<span className="text-emerald-500">{stat.suffix}</span>
+      </p>
+      <p className="text-sm text-muted-foreground leading-relaxed">{stat.label}</p>
+    </motion.div>
+  );
+};
+
 const VisionEducation = () => {
   const [dayCount, setDayCount] = useState(0);
   const { scrollYProgress } = useScroll();

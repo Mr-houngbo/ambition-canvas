@@ -13,6 +13,7 @@ const Header = () => {
     { path: '/', label: 'Entreprise', icon: Briefcase, color: 'primary' },
     { path: '/education', label: 'Académique', icon: GraduationCap, color: 'academic' },
     { path: '/projet-houefa', label: 'Houefa', icon: Building2, color: 'houefa' },
+    { path: '/vision-education', label: 'Vision Édu', icon: Lightbulb, color: 'vision' },
     { path: '/portfolio', label: 'Portfolio', icon: Share2, color: 'accent' },
   ];
 
