@@ -13,6 +13,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import Portfolio from "./pages/Portfolio";
 import ProjetHouefa from "./pages/ProjetHouefa";
 import VisionEducation from "./pages/VisionEducation";
+import Daho from "./pages/Daho";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 
