@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, Briefcase, GraduationCap, Share2, LogOut, Building2, Lightbulb } from 'lucide-react';
+import { Sparkles, Briefcase, GraduationCap, Share2, LogOut, Building2, Lightbulb, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/hooks/useSimpleAuth';
