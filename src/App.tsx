@@ -38,6 +38,7 @@ const AuthenticatedApp = () => {
         <Route path="/portfolio" element={<Portfolio />} />
         <Route path="/projet-houefa" element={<ProjetHouefa />} />
         <Route path="/vision-education" element={<VisionEducation />} />
+        <Route path="/daho" element={<Daho />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
