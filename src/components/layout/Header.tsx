@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, Briefcase, GraduationCap, Share2, LogOut, Building2, Lightbulb } from 'lucide-react';
+import { Sparkles, Briefcase, GraduationCap, Share2, LogOut, Building2, Lightbulb, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/hooks/useSimpleAuth';
@@ -14,6 +14,7 @@ const Header = () => {
     { path: '/education', label: 'Académique', icon: GraduationCap, color: 'academic' },
     { path: '/projet-houefa', label: 'Houefa', icon: Building2, color: 'houefa' },
     { path: '/vision-education', label: 'Vision Édu', icon: Lightbulb, color: 'vision' },
+    { path: '/daho', label: 'Daho', icon: Rocket, color: 'daho' },
     { path: '/portfolio', label: 'Portfolio', icon: Share2, color: 'accent' },
   ];
 
@@ -53,6 +54,8 @@ const Header = () => {
                         ? "bg-academic/10 text-academic"
                         : link.color === 'accent'
                         ? "bg-accent/10 text-accent"
+                        : link.color === 'daho'
+                        ? "bg-orange-500/10 text-orange-600"
                         : (link.color === 'houefa' || link.color === 'vision')
                         ? "bg-emerald-500/10 text-emerald-600"
                         : "bg-primary/10 text-primary"

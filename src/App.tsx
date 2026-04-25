@@ -13,6 +13,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import Portfolio from "./pages/Portfolio";
 import ProjetHouefa from "./pages/ProjetHouefa";
 import VisionEducation from "./pages/VisionEducation";
+import Daho from "./pages/Daho";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 
@@ -37,6 +38,7 @@ const AuthenticatedApp = () => {
         <Route path="/portfolio" element={<Portfolio />} />
         <Route path="/projet-houefa" element={<ProjetHouefa />} />
         <Route path="/vision-education" element={<VisionEducation />} />
+        <Route path="/daho" element={<Daho />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
