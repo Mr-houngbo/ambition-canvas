@@ -54,6 +54,8 @@ const Header = () => {
                         ? "bg-academic/10 text-academic"
                         : link.color === 'accent'
                         ? "bg-accent/10 text-accent"
+                        : link.color === 'daho'
+                        ? "bg-orange-500/10 text-orange-600"
                         : (link.color === 'houefa' || link.color === 'vision')
                         ? "bg-emerald-500/10 text-emerald-600"
                         : "bg-primary/10 text-primary"
