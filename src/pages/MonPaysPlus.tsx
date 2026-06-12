@@ -4,40 +4,63 @@ import {
   Globe2,
   Layers,
   Users2,
-  Map,
+  Map as MapIcon,
   BookOpen,
   PenLine,
   Mic2,
+  Search,
+  LayoutDashboard,
   ArrowUpRight,
   Sparkles,
-  Target,
-  Compass,
   Quote,
-  ChevronDown,
-  Heart,
-  Lightbulb,
-  TrendingUp,
+  Shield,
+  Database,
+  Server,
+  Palette,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 
-/* ---------- Palette (marron-orange) ----------
-   --clay   #C56A3E   (orange terre cuite)
-   --rust   #8E3B1F   (marron rouille)
-   --ochre  #E8A66B   (ocre clair)
-   --cream  #F6EFE6   (crème)
-   --ink    #1E140E   (brun nuit)
------------------------------------------------- */
-
-const PALETTE = {
-  clay: "#C56A3E",
-  rust: "#8E3B1F",
-  ochre: "#E8A66B",
-  cream: "#F6EFE6",
-  ink: "#1E140E",
+/* ============ PALETTE — MonPays+ (PRD) ============
+   primary       #6B3A2A  marron profond
+   primary-light #9C5A3C
+   primary-dark  #3E1F13
+   accent        #D4A853  or savane
+   accent-soft   #F0D9A8
+   surface       #FAF6F1
+   surface-alt   #F0E8DC
+   text-primary  #1C1008
+   text-secondary#7A5C4A
+   border        #E2D0BE
+==================================================== */
+const C = {
+  primary: "#6B3A2A",
+  primaryLight: "#9C5A3C",
+  primaryDark: "#3E1F13",
+  accent: "#D4A853",
+  accentSoft: "#F0D9A8",
+  surface: "#FAF6F1",
+  surfaceAlt: "#F0E8DC",
+  ink: "#1C1008",
+  text2: "#7A5C4A",
+  border: "#E2D0BE",
 };
 
+/* Adinkra-inspired SVG pattern (subtle, 4% opacity) */
+const adinkraPattern = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>
+    <g fill='none' stroke='#6B3A2A' stroke-width='1'>
+      <circle cx='40' cy='40' r='14'/>
+      <circle cx='40' cy='40' r='6'/>
+      <path d='M40 6 L40 26 M40 54 L40 74 M6 40 L26 40 M54 40 L74 40'/>
+      <path d='M14 14 L26 26 M54 54 L66 66 M66 14 L54 26 M26 54 L14 66'/>
+    </g>
+  </svg>`
+)}`;
+
 /* ---------------- Hook: count up ---------------- */
-function useCountUp(target: number, duration = 1800, start = false) {
+function useCountUp(target: number, duration = 1600, start = false) {
   const [val, setVal] = useState(0);
   useEffect(() => {
     if (!start) return;
@@ -55,939 +78,807 @@ function useCountUp(target: number, duration = 1800, start = false) {
   return val;
 }
 
-/* ---------------- Section wrapper ---------------- */
-const Section = ({
-  children,
-  className = "",
-  id,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  id?: string;
-}) => (
-  <section id={id} className={`relative px-6 md:px-12 lg:px-20 py-24 md:py-32 ${className}`}>
-    {children}
-  </section>
-);
+/* ---------------- Reveal helper ---------------- */
+function Reveal({ children, delay = 0, y = 24 }: { children: React.ReactNode; delay?: number; y?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
-/* ---------------- Modules data ---------------- */
-const MODULES = [
-  {
-    n: "01",
-    icon: Globe2,
-    title: "Initiatives",
-    sub: "Le monde décortiqué",
-    desc: "Fiches détaillées des meilleures initiatives mondiales : mécanisme de succès, conditions, obstacles, note de faisabilité au Bénin.",
-    tags: ["Éducation", "Santé", "Agriculture", "Tech", "Gouvernance"],
-  },
-  {
-    n: "02",
-    icon: Layers,
-    title: "Domaines",
-    sub: "Vue par secteur",
-    desc: "Tableau de bord par secteur — nombre d'initiatives, lacunes identifiées, priorités stratégiques pour le Bénin.",
-    tags: ["Cartographie", "Priorités", "Lacunes"],
-  },
-  {
-    n: "03",
-    icon: Users2,
-    title: "Réseau",
-    sub: "Les bonnes personnes",
-    desc: "Répertoire des talents identifiés à travers le monde — compétence, statut de la relation, potentiel de collaboration.",
-    tags: ["Économistes", "Investisseurs", "Experts"],
-  },
-  {
-    n: "04",
-    icon: Map,
-    title: "Roadmap 5 ans",
-    sub: "Du rêve au plan",
-    desc: "Jalons interactifs, deadlines, progression. La trajectoire entre aujourd'hui (étudiant) et le retour au pays.",
-    tags: ["Jalons", "Deadlines", "Progress"],
-  },
-  {
-    n: "05",
-    icon: BookOpen,
-    title: "Bibliothèque",
-    sub: "Le savoir au chaud",
-    desc: "Rapports, articles, livres, vidéos — classés par thème, annotés, prêts à servir la pensée stratégique.",
-    tags: ["Rapports", "Livres", "Vidéos"],
-  },
-  {
-    n: "06",
-    icon: PenLine,
-    title: "Journal stratégique",
-    sub: "La pensée en mouvement",
-    desc: "Espace de réflexion brute. Notes d'analyse, intuitions, remises en question. L'évolution de ma pensée datée.",
-    tags: ["Analyse", "Doutes", "Idées"],
-  },
-  {
-    n: "07",
-    icon: Mic2,
-    title: "Conférence 2030",
-    sub: "Le rendez-vous",
-    desc: "Programme, intervenants, logistique, budget, propositions. La préparation de l'événement qui transformera 5 ans de veille en action.",
-    tags: ["Programme", "Intervenants", "Budget"],
-  },
-];
-
-/* ---------------- Domaines ---------------- */
-const DOMAINES = [
-  { name: "Éducation", icon: "01", note: "Finlande · Singapour" },
-  { name: "Santé", icon: "02", note: "Rwanda · Cuba" },
-  { name: "Agriculture", icon: "03", note: "Pays-Bas · Israël" },
-  { name: "Tech", icon: "04", note: "Estonie · Kenya" },
-  { name: "Gouvernance", icon: "05", note: "Singapour · Botswana" },
-  { name: "Finance", icon: "06", note: "Inde · Suisse" },
-  { name: "Infrastructure", icon: "07", note: "Chine · Maroc" },
-  { name: "Énergie", icon: "08", note: "Norvège · Costa Rica" },
-];
-
-/* ---------------- Phases ---------------- */
-const PHASES = [
-  {
-    year: "An 1–2",
-    label: "Collecter",
-    desc: "Recensement obsessionnel. Lecture, voyages, conversations. La matière première s'accumule.",
-  },
-  {
-    year: "An 2–3",
-    label: "Analyser",
-    desc: "Décortiquer chaque succès. Comprendre les conditions. Mesurer la transférabilité au contexte béninois.",
-  },
-  {
-    year: "An 3–4",
-    label: "Tisser",
-    desc: "Construire le réseau. Économistes, investisseurs, praticiens. Mobiliser les ressources financières.",
-  },
-  {
-    year: "An 4–5",
-    label: "Rentrer",
-    desc: "Retour au Bénin. Préparation finale de la conférence nationale. Activation du plan.",
-  },
-  {
-    year: "An 5",
-    label: "Conférence",
-    desc: "Trois jours. Cent personnes. Un livre blanc. Et le début d'une bascule.",
-  },
-];
-
-/* ---------------- Identité (noms candidats) ---------------- */
-const NAMES = [
-  { name: "AkoBénin", meaning: "Ako = savoir", vibe: "Linguistique africain" },
-  { name: "LaboFon", meaning: "Laboratoire des fondations", vibe: "Scientifique" },
-  { name: "Hounwa", meaning: "Vision en Fon", vibe: "Poétique" },
-  { name: "BéninLab", meaning: "Le laboratoire du Bénin", vibe: "Direct" },
-  { name: "2030BJ", meaning: "Le rendez-vous daté", vibe: "Manifeste" },
-];
-
-/* ===================== PAGE ===================== */
+/* =================================================
+   PAGE
+================================================= */
 export default function MonPaysPlus() {
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
-  });
-  const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0.2]);
-
-  /* Stats trigger */
-  const statsRef = useRef(null);
-  const statsInView = useInView(statsRef, { once: true, margin: "-100px" });
-  const c1 = useCountUp(7, 1500, statsInView);
-  const c2 = useCountUp(54, 1800, statsInView);
-  const c3 = useCountUp(2030, 2200, statsInView);
-  const c4 = useCountUp(100, 1600, statsInView);
-
-  /* Inject fonts once */
+  /* Load fonts */
   useEffect(() => {
-    if (document.getElementById("monpays-fonts")) return;
-    const l = document.createElement("link");
-    l.id = "monpays-fonts";
-    l.rel = "stylesheet";
-    l.href =
-      "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,800;9..144,900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
-    document.head.appendChild(l);
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href =
+      "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Serif+Display&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap";
+    document.head.appendChild(link);
+    return () => {
+      document.head.removeChild(link);
+    };
   }, []);
+
+  const heroRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 140]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
 
   return (
     <div
-      className="min-h-screen relative overflow-x-hidden"
       style={{
-        background: PALETTE.cream,
-        color: PALETTE.ink,
-        fontFamily: "'Inter', system-ui, sans-serif",
+        background: C.surface,
+        color: C.ink,
+        fontFamily: "'Inter', sans-serif",
       }}
+      className="min-h-screen"
     >
       <Header />
 
-      {/* Decorative grain */}
-      <div
-        className="fixed inset-0 pointer-events-none opacity-[0.05] mix-blend-multiply z-0"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
-        }}
-      />
-
-      {/* ====================== HERO ====================== */}
+      {/* ============= HERO ============= */}
       <section
         ref={heroRef}
-        className="relative min-h-[100vh] flex items-end px-6 md:px-12 lg:px-20 pb-20 pt-32 overflow-hidden"
-      >
-        {/* Soleil ocre */}
-        <motion.div
-          style={{ y: heroY, opacity: heroOpacity }}
-          className="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full"
-        >
-          <div
-            className="w-full h-full rounded-full"
-            style={{
-              background: `radial-gradient(circle at center, ${PALETTE.clay} 0%, ${PALETTE.ochre} 40%, transparent 70%)`,
-              filter: "blur(8px)",
-              opacity: 0.85,
-            }}
-          />
-        </motion.div>
-
-        {/* Lignes verticales décor */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute left-[12%] top-0 bottom-0 w-px" style={{ background: `${PALETTE.rust}15` }} />
-          <div className="absolute left-[50%] top-0 bottom-0 w-px" style={{ background: `${PALETTE.rust}10` }} />
-          <div className="absolute left-[88%] top-0 bottom-0 w-px" style={{ background: `${PALETTE.rust}15` }} />
-        </div>
-
-        <div className="relative z-10 max-w-7xl mx-auto w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="flex items-center gap-3 mb-10"
-          >
-            <span
-              className="w-12 h-px"
-              style={{ background: PALETTE.rust }}
-            />
-            <span
-              className="text-xs uppercase tracking-[0.3em] font-medium"
-              style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.rust }}
-            >
-              Plateforme · Think tank personnel · Bénin
-            </span>
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.1 }}
-            className="font-black leading-[0.88] tracking-tight"
-            style={{
-              fontFamily: "'Fraunces', serif",
-              fontSize: "clamp(3.5rem, 11vw, 10rem)",
-              color: PALETTE.ink,
-            }}
-          >
-            Mon<span style={{ color: PALETTE.clay }}>Pays</span>
-            <span
-              style={{
-                color: PALETTE.clay,
-                fontStyle: "italic",
-                fontWeight: 300,
-              }}
-            >
-              +
-            </span>
-          </motion.h1>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="mt-10 grid md:grid-cols-12 gap-8 items-end"
-          >
-            <p
-              className="md:col-span-7 text-xl md:text-2xl leading-relaxed"
-              style={{ color: `${PALETTE.ink}cc`, fontFamily: "'Fraunces', serif" }}
-            >
-              Recenser ce que le monde fait de mieux. L'adapter au Bénin.
-              <br />
-              Et dans <span style={{ color: PALETTE.rust, fontWeight: 600 }}>cinq ans</span>, revenir avec un plan.
-            </p>
-
-            <div className="md:col-span-4 md:col-start-9 flex flex-col gap-2">
-              <span
-                className="text-[10px] uppercase tracking-[0.25em]"
-                style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.rust }}
-              >
-                Statut
-              </span>
-              <span className="text-base font-medium" style={{ color: PALETTE.ink }}>
-                Phase 1 — Collecte active
-              </span>
-              <div
-                className="h-1 rounded-full overflow-hidden mt-1"
-                style={{ background: `${PALETTE.rust}20` }}
-              >
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: "12%" }}
-                  transition={{ duration: 1.5, delay: 1 }}
-                  className="h-full rounded-full"
-                  style={{ background: PALETTE.clay }}
-                />
-              </div>
-              <span
-                className="text-xs mt-1"
-                style={{ fontFamily: "'JetBrains Mono', monospace", color: `${PALETTE.ink}80` }}
-              >
-                An 1 / 5 · Conférence prévue 2030
-              </span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 1.4 }}
-            className="absolute bottom-8 left-6 md:left-12 lg:left-20 flex items-center gap-3"
-          >
-            <ChevronDown
-              className="w-4 h-4 animate-bounce"
-              style={{ color: PALETTE.rust }}
-            />
-            <span
-              className="text-xs uppercase tracking-[0.25em]"
-              style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.rust }}
-            >
-              Faire défiler
-            </span>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ====================== MANIFESTO ====================== */}
-      <Section className="border-t" id="manifeste">
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-            className="flex items-center gap-3 mb-12"
-          >
-            <Quote className="w-5 h-5" style={{ color: PALETTE.clay }} />
-            <span
-              className="text-xs uppercase tracking-[0.3em]"
-              style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.rust }}
-            >
-              Pourquoi cette plateforme existe
-            </span>
-          </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.9, delay: 0.1 }}
-            className="leading-[1.2] tracking-tight"
-            style={{
-              fontFamily: "'Fraunces', serif",
-              fontSize: "clamp(1.75rem, 4vw, 3.25rem)",
-              fontWeight: 400,
-              color: PALETTE.ink,
-            }}
-          >
-            Je suis béninois, étudiant à l'étranger. Je vois chaque jour ce qui marche
-            ailleurs — et je sais que mon pays peut faire pareil.{" "}
-            <span style={{ color: PALETTE.clay, fontStyle: "italic" }}>
-              Pas demain. Mais pas dans trente ans non plus.
-            </span>
-          </motion.p>
-
-          <motion.p
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.9, delay: 0.2 }}
-            className="mt-10 text-lg md:text-xl leading-relaxed max-w-3xl"
-            style={{ color: `${PALETTE.ink}cc` }}
-          >
-            Aujourd'hui je n'ai ni le réseau, ni le capital, ni la légitimité.
-            J'ai cinq ans devant moi. Cinq ans pour observer, documenter, comprendre, et
-            préparer. Cette plateforme est mon laboratoire — la mémoire vive d'une
-            ambition qui ne se laissera pas oublier.
-          </motion.p>
-        </div>
-      </Section>
-
-      {/* ====================== STATS ====================== */}
-      <section
-        ref={statsRef}
-        className="relative px-6 md:px-12 lg:px-20 py-24"
-        style={{ background: PALETTE.ink, color: PALETTE.cream }}
-      >
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-16">
-            <Sparkles className="w-5 h-5" style={{ color: PALETTE.ochre }} />
-            <span
-              className="text-xs uppercase tracking-[0.3em]"
-              style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.ochre }}
-            >
-              La donne
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-6">
-            {[
-              { val: c1, label: "Modules pour penser le pays", suffix: "" },
-              { val: c2, label: "Pays passés au crible", suffix: "+" },
-              { val: c3, label: "Année de la conférence", suffix: "" },
-              { val: c4, label: "Personnes attendues", suffix: "" },
-            ].map((s, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08, duration: 0.6 }}
-              >
-                <div
-                  className="font-black leading-none"
-                  style={{
-                    fontFamily: "'Fraunces', serif",
-                    fontSize: "clamp(3rem, 7vw, 6rem)",
-                    color: PALETTE.ochre,
-                  }}
-                >
-                  {s.val}
-                  {s.suffix}
-                </div>
-                <div
-                  className="mt-3 text-sm uppercase tracking-wider"
-                  style={{ fontFamily: "'JetBrains Mono', monospace", color: `${PALETTE.cream}aa` }}
-                >
-                  {s.label}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ====================== MODULES ====================== */}
-      <Section id="modules">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-20 max-w-3xl"
-          >
-            <span
-              className="text-xs uppercase tracking-[0.3em] block mb-4"
-              style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.rust }}
-            >
-              · 02 · Les sept modules
-            </span>
-            <h2
-              className="font-black leading-[0.95] tracking-tight"
-              style={{
-                fontFamily: "'Fraunces', serif",
-                fontSize: "clamp(2.5rem, 6vw, 5rem)",
-                color: PALETTE.ink,
-              }}
-            >
-              Sept espaces.
-              <br />
-              <span style={{ color: PALETTE.clay, fontStyle: "italic", fontWeight: 400 }}>
-                Une seule trajectoire.
-              </span>
-            </h2>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {MODULES.map((m, i) => {
-              const Icon = m.icon;
-              const isFeatured = i === 0 || i === 6;
-              return (
-                <motion.div
-                  key={m.n}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ delay: (i % 3) * 0.08, duration: 0.6 }}
-                  whileHover={{ y: -6 }}
-                  className={`group relative overflow-hidden rounded-3xl p-8 border transition-all duration-500 ${
-                    isFeatured ? "lg:col-span-1" : ""
-                  }`}
-                  style={{
-                    background: isFeatured
-                      ? `linear-gradient(135deg, ${PALETTE.clay}, ${PALETTE.rust})`
-                      : "#fff",
-                    borderColor: isFeatured ? "transparent" : `${PALETTE.rust}20`,
-                    color: isFeatured ? PALETTE.cream : PALETTE.ink,
-                    boxShadow: isFeatured
-                      ? `0 25px 60px -20px ${PALETTE.rust}55`
-                      : `0 10px 30px -15px ${PALETTE.rust}25`,
-                  }}
-                >
-                  <div className="flex items-start justify-between mb-12">
-                    <div
-                      className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                      style={{
-                        background: isFeatured ? `${PALETTE.cream}25` : `${PALETTE.clay}15`,
-                      }}
-                    >
-                      <Icon
-                        className="w-6 h-6"
-                        style={{ color: isFeatured ? PALETTE.cream : PALETTE.clay }}
-                      />
-                    </div>
-                    <span
-                      className="text-xs tracking-[0.25em] opacity-60"
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      {m.n}
-                    </span>
-                  </div>
-
-                  <div
-                    className="text-xs uppercase tracking-[0.25em] mb-2 opacity-70"
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    {m.sub}
-                  </div>
-                  <h3
-                    className="text-3xl font-bold mb-4 leading-tight"
-                    style={{ fontFamily: "'Fraunces', serif" }}
-                  >
-                    {m.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed opacity-85 mb-6">{m.desc}</p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {m.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider"
-                        style={{
-                          background: isFeatured ? `${PALETTE.cream}20` : `${PALETTE.rust}08`,
-                          color: isFeatured ? PALETTE.cream : PALETTE.rust,
-                          fontFamily: "'JetBrains Mono', monospace",
-                        }}
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-
-                  <ArrowUpRight
-                    className="absolute top-8 right-8 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ color: isFeatured ? PALETTE.cream : PALETTE.clay }}
-                  />
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </Section>
-
-      {/* ====================== DOMAINES ====================== */}
-      <Section className="border-t" id="domaines" >
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="grid md:grid-cols-12 gap-10 mb-16"
-          >
-            <div className="md:col-span-5">
-              <span
-                className="text-xs uppercase tracking-[0.3em] block mb-4"
-                style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.rust }}
-              >
-                · 03 · Champs d'observation
-              </span>
-              <h2
-                className="font-black leading-[0.95] tracking-tight"
-                style={{
-                  fontFamily: "'Fraunces', serif",
-                  fontSize: "clamp(2.25rem, 4.5vw, 3.75rem)",
-                  color: PALETTE.ink,
-                }}
-              >
-                Huit domaines.
-                <br />
-                <span style={{ color: PALETTE.clay, fontStyle: "italic", fontWeight: 400 }}>
-                  Le monde entier.
-                </span>
-              </h2>
-            </div>
-            <p
-              className="md:col-span-6 md:col-start-7 text-lg leading-relaxed self-end"
-              style={{ color: `${PALETTE.ink}b0` }}
-            >
-              Pour chaque domaine, deux ou trois pays-références. On ne réinvente pas la
-              roue — on prend ce qui fonctionne, on comprend pourquoi, on adapte.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 border-t" style={{ borderColor: `${PALETTE.rust}25` }}>
-            {DOMAINES.map((d, i) => (
-              <motion.div
-                key={d.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-                className="group p-8 border-b border-r transition-colors duration-300 cursor-pointer"
-                style={{ borderColor: `${PALETTE.rust}25` }}
-                whileHover={{ background: `${PALETTE.clay}08` }}
-              >
-                <span
-                  className="text-xs opacity-50"
-                  style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.rust }}
-                >
-                  {d.icon}
-                </span>
-                <h3
-                  className="mt-3 text-2xl font-bold leading-tight"
-                  style={{ fontFamily: "'Fraunces', serif", color: PALETTE.ink }}
-                >
-                  {d.name}
-                </h3>
-                <p
-                  className="mt-1 text-xs uppercase tracking-wider"
-                  style={{ fontFamily: "'JetBrains Mono', monospace", color: `${PALETTE.ink}70` }}
-                >
-                  {d.note}
-                </p>
-                <ArrowUpRight
-                  className="mt-6 w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ color: PALETTE.clay }}
-                />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </Section>
-
-      {/* ====================== ROADMAP ====================== */}
-      <section
-        className="relative px-6 md:px-12 lg:px-20 py-32"
-        style={{ background: PALETTE.ink, color: PALETTE.cream }}
-        id="roadmap"
-      >
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-20 max-w-3xl"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <Compass className="w-5 h-5" style={{ color: PALETTE.ochre }} />
-              <span
-                className="text-xs uppercase tracking-[0.3em]"
-                style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.ochre }}
-              >
-                · 04 · Trajectoire
-              </span>
-            </div>
-            <h2
-              className="font-black leading-[0.95] tracking-tight"
-              style={{
-                fontFamily: "'Fraunces', serif",
-                fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
-              }}
-            >
-              Cinq ans.{" "}
-              <span style={{ color: PALETTE.ochre, fontStyle: "italic", fontWeight: 400 }}>
-                Cinq mouvements.
-              </span>
-            </h2>
-          </motion.div>
-
-          <div className="relative">
-            {/* Ligne verticale */}
-            <div
-              className="absolute left-4 md:left-1/2 top-0 bottom-0 w-px"
-              style={{ background: `${PALETTE.ochre}30` }}
-            />
-
-            <div className="space-y-16">
-              {PHASES.map((p, i) => {
-                const left = i % 2 === 0;
-                return (
-                  <motion.div
-                    key={p.year}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-50px" }}
-                    transition={{ duration: 0.6 }}
-                    className={`relative grid md:grid-cols-2 gap-8 ${left ? "" : "md:[direction:rtl]"}`}
-                  >
-                    {/* Marker */}
-                    <div className="absolute left-4 md:left-1/2 top-3 -translate-x-1/2 z-10">
-                      <div className="relative">
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{ background: PALETTE.clay }}
-                        />
-                        {i === 0 && (
-                          <div
-                            className="absolute inset-0 rounded-full animate-ping"
-                            style={{ background: PALETTE.clay, opacity: 0.5 }}
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    <div
-                      className={`pl-12 md:pl-0 ${left ? "md:pr-16 md:text-right" : "md:pl-16 md:text-left [direction:ltr]"}`}
-                    >
-                      <span
-                        className="text-xs uppercase tracking-[0.3em]"
-                        style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.ochre }}
-                      >
-                        {p.year}
-                      </span>
-                      <h3
-                        className="text-4xl md:text-5xl font-black mt-2"
-                        style={{ fontFamily: "'Fraunces', serif" }}
-                      >
-                        {p.label}
-                      </h3>
-                    </div>
-                    <div
-                      className={`pl-12 md:pl-0 ${left ? "md:pl-16 [direction:ltr]" : "md:pr-16 md:text-right"}`}
-                    >
-                      <p
-                        className="text-base md:text-lg leading-relaxed"
-                        style={{ color: `${PALETTE.cream}c0` }}
-                      >
-                        {p.desc}
-                      </p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ====================== IDENTITÉ ====================== */}
-      <Section id="identite">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-16"
-          >
-            <span
-              className="text-xs uppercase tracking-[0.3em] block mb-4"
-              style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.rust }}
-            >
-              · 05 · Identité — nom de travail
-            </span>
-            <h2
-              className="font-black leading-[0.95] tracking-tight max-w-4xl"
-              style={{
-                fontFamily: "'Fraunces', serif",
-                fontSize: "clamp(2.25rem, 5vw, 4rem)",
-                color: PALETTE.ink,
-              }}
-            >
-              Encore en quête{" "}
-              <span style={{ color: PALETTE.clay, fontStyle: "italic", fontWeight: 400 }}>
-                du bon nom.
-              </span>
-            </h2>
-          </motion.div>
-
-          <div className="grid md:grid-cols-5 gap-4">
-            {NAMES.map((n, i) => (
-              <motion.div
-                key={n.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.07 }}
-                whileHover={{ y: -4 }}
-                className="p-6 rounded-2xl border bg-white cursor-pointer transition-all duration-300"
-                style={{
-                  borderColor: `${PALETTE.rust}20`,
-                  boxShadow: `0 10px 30px -20px ${PALETTE.rust}40`,
-                }}
-              >
-                <div
-                  className="text-2xl font-bold mb-3"
-                  style={{ fontFamily: "'Fraunces', serif", color: PALETTE.ink }}
-                >
-                  {n.name}
-                </div>
-                <div className="text-sm leading-relaxed" style={{ color: `${PALETTE.ink}90` }}>
-                  {n.meaning}
-                </div>
-                <div
-                  className="mt-4 text-[10px] uppercase tracking-wider"
-                  style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.clay }}
-                >
-                  {n.vibe}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </Section>
-
-      {/* ====================== PRINCIPES ====================== */}
-      <Section className="border-t" id="principes">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="mb-20"
-          >
-            <span
-              className="text-xs uppercase tracking-[0.3em] block mb-4"
-              style={{ fontFamily: "'JetBrains Mono', monospace", color: PALETTE.rust }}
-            >
-              · 06 · Principes directeurs
-            </span>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-12">
-            {[
-              {
-                icon: Target,
-                title: "Rigueur",
-                t: "Pas de naïveté. Chaque initiative est jugée à l'aune des conditions béninoises — réalisme avant tout.",
-              },
-              {
-                icon: Heart,
-                title: "Espoir lucide",
-                t: "On ne nie pas les obstacles. On les nomme, on les contourne, on les transforme en leviers.",
-              },
-              {
-                icon: TrendingUp,
-                title: "Action différée",
-                t: "L'urgence n'est pas dans l'exécution immédiate, mais dans la qualité de la préparation.",
-              },
-            ].map((p, i) => {
-              const Icon = p.icon;
-              return (
-                <motion.div
-                  key={p.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <Icon className="w-8 h-8 mb-6" style={{ color: PALETTE.clay }} />
-                  <h3
-                    className="text-3xl font-bold mb-4"
-                    style={{ fontFamily: "'Fraunces', serif", color: PALETTE.ink }}
-                  >
-                    {p.title}
-                  </h3>
-                  <p className="text-base leading-relaxed" style={{ color: `${PALETTE.ink}b0` }}>
-                    {p.t}
-                  </p>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </Section>
-
-      {/* ====================== CLOSING ====================== */}
-      <section
-        className="relative px-6 md:px-12 lg:px-20 py-32 overflow-hidden"
+        className="relative overflow-hidden"
         style={{
-          background: `linear-gradient(135deg, ${PALETTE.rust}, ${PALETTE.clay})`,
-          color: PALETTE.cream,
+          background: `linear-gradient(180deg, ${C.surface} 0%, ${C.surfaceAlt} 100%)`,
         }}
       >
         <div
-          className="absolute -bottom-32 -left-32 w-[500px] h-[500px] rounded-full"
+          className="absolute inset-0"
           style={{
-            background: `radial-gradient(circle, ${PALETTE.ochre}50 0%, transparent 70%)`,
+            backgroundImage: `url("${adinkraPattern}")`,
+            opacity: 0.04,
           }}
         />
+        {/* soft golden glow */}
+        <div
+          className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full blur-3xl"
+          style={{ background: `radial-gradient(circle, ${C.accent}40, transparent 70%)` }}
+        />
+        <div
+          className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full blur-3xl"
+          style={{ background: `radial-gradient(circle, ${C.primary}30, transparent 70%)` }}
+        />
 
-        <div className="relative max-w-5xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="flex justify-center mb-8"
-          >
-            <Lightbulb className="w-10 h-10" style={{ color: PALETTE.cream }} />
-          </motion.div>
+        <motion.div
+          style={{ y: heroY, opacity: heroOpacity }}
+          className="relative max-w-7xl mx-auto px-6 lg:px-12 pt-32 pb-40"
+        >
+          {/* Eyebrow */}
+          <Reveal>
+            <div className="flex items-center gap-3 mb-10">
+              <div className="h-px w-12" style={{ background: C.primary }} />
+              <span
+                className="text-xs tracking-[0.3em] uppercase font-semibold"
+                style={{ fontFamily: "'JetBrains Mono', monospace", color: C.primary }}
+              >
+                PRD v1.0 · Application personnelle stratégique
+              </span>
+            </div>
+          </Reveal>
 
-          <motion.h2
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="font-black leading-[0.95] tracking-tight"
-            style={{
-              fontFamily: "'Fraunces', serif",
-              fontSize: "clamp(2.5rem, 7vw, 5.5rem)",
-            }}
-          >
-            Le Bénin n'attendra pas.
-            <br />
-            <span style={{ fontStyle: "italic", fontWeight: 400, color: PALETTE.cream }}>
-              Mais moi, je me prépare.
-            </span>
-          </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.3 }}
-            className="mt-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed"
-            style={{ color: `${PALETTE.cream}d0` }}
-          >
-            Cette plateforme grandira avec moi. Privée aujourd'hui. Partagée demain.
-            Publique le jour où elle sera prête à parler au pays tout entier.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.5 }}
-            className="mt-12 inline-flex items-center gap-3 px-6 py-3 rounded-full"
-            style={{ background: `${PALETTE.cream}15`, border: `1px solid ${PALETTE.cream}30` }}
-          >
-            <div className="w-2 h-2 rounded-full bg-current animate-pulse" />
-            <span
-              className="text-xs uppercase tracking-[0.3em]"
-              style={{ fontFamily: "'JetBrains Mono', monospace" }}
+          {/* Title */}
+          <Reveal delay={0.1}>
+            <h1
+              className="leading-[0.92] tracking-tight"
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontWeight: 900,
+                fontSize: "clamp(3.5rem, 9vw, 8rem)",
+                color: C.ink,
+              }}
             >
-              Rendez-vous en 2030
-            </span>
+              MonPays<span style={{ color: C.accent }}>+</span>
+            </h1>
+          </Reveal>
+
+          <Reveal delay={0.2}>
+            <p
+              className="mt-8 max-w-3xl leading-tight"
+              style={{
+                fontFamily: "'DM Serif Display', serif",
+                fontSize: "clamp(1.5rem, 2.6vw, 2.4rem)",
+                color: C.primary,
+              }}
+            >
+              Observer le monde. Construire le Bénin.
+            </p>
+          </Reveal>
+
+          <Reveal delay={0.3}>
+            <p
+              className="mt-8 max-w-2xl text-lg leading-relaxed"
+              style={{ color: C.text2 }}
+            >
+              Une plateforme hybride entre <strong style={{ color: C.ink }}>knowledge base</strong>,{" "}
+              <strong style={{ color: C.ink }}>think tank personnel</strong> et{" "}
+              <strong style={{ color: C.ink }}>outil de planification stratégique</strong>. Recenser, analyser
+              et adapter ce que d'autres pays font de mieux — pour préparer une transformation
+              durable du Bénin sur 5 à 10 ans.
+            </p>
+          </Reveal>
+
+          {/* Meta grid */}
+          <Reveal delay={0.4}>
+            <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-px" style={{ background: C.border }}>
+              {[
+                { k: "Horizon", v: "5 ans" },
+                { k: "Phases", v: "3" },
+                { k: "Modules", v: "9" },
+                { k: "Statut", v: "v1.0" },
+              ].map((m) => (
+                <div key={m.k} className="p-6" style={{ background: C.surface }}>
+                  <div
+                    className="text-[10px] tracking-[0.25em] uppercase mb-2"
+                    style={{ fontFamily: "'JetBrains Mono', monospace", color: C.text2 }}
+                  >
+                    {m.k}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "'Playfair Display', serif",
+                      fontSize: "2rem",
+                      fontWeight: 700,
+                      color: C.primary,
+                    }}
+                  >
+                    {m.v}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </motion.div>
+
+        {/* scroll cue */}
+        <div
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-xs tracking-[0.3em] uppercase"
+          style={{ color: C.text2, fontFamily: "'JetBrains Mono', monospace" }}
+        >
+          <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+            Découvrir ↓
           </motion.div>
         </div>
       </section>
 
-      <footer
-        className="px-6 md:px-12 lg:px-20 py-10 text-center"
-        style={{ background: PALETTE.ink, color: `${PALETTE.cream}60` }}
+      {/* ============= MANIFESTO / QUOTE ============= */}
+      <section
+        className="relative py-32 overflow-hidden"
+        style={{ background: C.primaryDark, color: C.surface }}
       >
-        <p
-          className="text-xs uppercase tracking-[0.3em]"
-          style={{ fontFamily: "'JetBrains Mono', monospace" }}
-        >
-          MonPays+ · Think tank personnel · Bénin · 2025—2030
-        </p>
-      </footer>
+        <div
+          className="absolute inset-0"
+          style={{ backgroundImage: `url("${adinkraPattern}")`, opacity: 0.05 }}
+        />
+        <div className="relative max-w-5xl mx-auto px-6 lg:px-12">
+          <Reveal>
+            <Quote className="w-12 h-12 mb-8" style={{ color: C.accent }} />
+          </Reveal>
+          <Reveal delay={0.1}>
+            <blockquote
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: "clamp(1.6rem, 3vw, 2.8rem)",
+                lineHeight: 1.25,
+                fontWeight: 400,
+              }}
+            >
+              « Je n'ai pas besoin d'attendre d'être au pouvoir pour commencer.
+              Je dois <em style={{ color: C.accent }}>observer maintenant</em>,
+              documenter méthodiquement, et bâtir un capital intellectuel et humain
+              que je ramènerai au Bénin — pour transformer ce que j'ai vu de mieux
+              chez les autres en réalité chez moi. »
+            </blockquote>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <div className="mt-10 flex items-center gap-4">
+              <div className="h-px w-12" style={{ background: C.accent }} />
+              <span
+                className="text-xs tracking-[0.3em] uppercase"
+                style={{ fontFamily: "'JetBrains Mono', monospace", color: C.accent }}
+              >
+                Vision fondatrice
+              </span>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ============= KPIs / STATS ============= */}
+      <KPIsSection />
+
+      {/* ============= 9 MODULES ============= */}
+      <section className="py-32 px-6 lg:px-12" style={{ background: C.surface }}>
+        <div className="max-w-7xl mx-auto">
+          <Reveal>
+            <SectionTitle eyebrow="02 · Architecture produit" title="9 modules pour penser, documenter, agir" />
+          </Reveal>
+
+          <div className="mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px"
+               style={{ background: C.border }}>
+            {MODULES.map((m, i) => (
+              <Reveal key={m.title} delay={i * 0.05}>
+                <ModuleCard {...m} index={i + 1} />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============= PHASES ============= */}
+      <PhasesSection />
+
+      {/* ============= STACK TECHNIQUE ============= */}
+      <StackSection />
+
+      {/* ============= KPIs ROADMAP ============= */}
+      <KPIRoadmapSection />
+
+      {/* ============= SÉCURITÉ ============= */}
+      <SecuritySection />
+
+      {/* ============= FOOTER MANIFESTO ============= */}
+      <section
+        className="py-32 px-6 lg:px-12 text-center relative overflow-hidden"
+        style={{ background: C.surfaceAlt }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{ backgroundImage: `url("${adinkraPattern}")`, opacity: 0.05 }}
+        />
+        <div className="relative max-w-3xl mx-auto">
+          <Reveal>
+            <Sparkles className="w-10 h-10 mx-auto mb-8" style={{ color: C.accent }} />
+          </Reveal>
+          <Reveal delay={0.1}>
+            <h2
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: "clamp(2rem, 4vw, 3.5rem)",
+                fontWeight: 700,
+                lineHeight: 1.1,
+                color: C.primaryDark,
+              }}
+            >
+              Ce projet n'est pas une idée.
+              <br />
+              <span style={{ color: C.accent }}>C'est un engagement.</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <p className="mt-8 text-lg leading-relaxed" style={{ color: C.text2 }}>
+              Dans 5 ou 10 ans, je reviendrai au Bénin avec des amis — économistes,
+              investisseurs, bâtisseurs. Nous organiserons une conférence. Tout ce
+              qui aura été documenté ici servira de socle. MonPays+ est l'outil
+              qui rend cela possible.
+            </p>
+          </Reveal>
+          <Reveal delay={0.3}>
+            <div
+              className="inline-flex items-center gap-3 mt-12 px-8 py-4 rounded-full"
+              style={{ background: C.primaryDark, color: C.surface }}
+            >
+              <span style={{ fontFamily: "'JetBrains Mono', monospace" }} className="text-xs tracking-[0.3em] uppercase">
+                Bénin · 2030
+              </span>
+              <ArrowUpRight className="w-4 h-4" style={{ color: C.accent }} />
+            </div>
+          </Reveal>
+        </div>
+      </section>
     </div>
+  );
+}
+
+/* ===========================================================
+   COMPONENTS
+=========================================================== */
+
+function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
+  return (
+    <div className="max-w-4xl">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="h-px w-10" style={{ background: C.primary }} />
+        <span
+          className="text-xs tracking-[0.3em] uppercase font-semibold"
+          style={{ fontFamily: "'JetBrains Mono', monospace", color: C.primary }}
+        >
+          {eyebrow}
+        </span>
+      </div>
+      <h2
+        style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: "clamp(2rem, 4.5vw, 4rem)",
+          fontWeight: 700,
+          lineHeight: 1.05,
+          color: C.ink,
+          letterSpacing: "-0.02em",
+        }}
+      >
+        {title}
+      </h2>
+    </div>
+  );
+}
+
+/* -------- KPIs hero stats -------- */
+function KPIsSection() {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-100px" });
+  const kpis = [
+    { label: "Initiatives à documenter", target: 500, suffix: "+" },
+    { label: "Domaines couverts", target: 7 },
+    { label: "Contacts réseau", target: 20, suffix: "+" },
+    { label: "Années d'horizon", target: 5 },
+  ];
+  return (
+    <section ref={ref} className="py-24 px-6 lg:px-12" style={{ background: C.surfaceAlt }}>
+      <div className="max-w-7xl mx-auto">
+        <Reveal>
+          <SectionTitle eyebrow="01 · Ambition mesurable" title="Des chiffres pour ancrer la vision." />
+        </Reveal>
+        <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-8">
+          {kpis.map((k, i) => {
+            const v = useCountUp(k.target, 1800, inView);
+            return (
+              <Reveal key={k.label} delay={i * 0.08}>
+                <div className="border-l-2 pl-6" style={{ borderColor: C.accent }}>
+                  <div
+                    style={{
+                      fontFamily: "'Playfair Display', serif",
+                      fontSize: "clamp(3rem, 6vw, 5rem)",
+                      fontWeight: 900,
+                      color: C.primary,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {v}
+                    {k.suffix || ""}
+                  </div>
+                  <div
+                    className="mt-3 text-sm leading-snug"
+                    style={{ color: C.text2 }}
+                  >
+                    {k.label}
+                  </div>
+                </div>
+              </Reveal>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------- Module card -------- */
+type Mod = {
+  title: string;
+  desc: string;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  features: string[];
+};
+
+const MODULES: Mod[] = [
+  {
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    desc: "Vue d'ensemble : stats globales, couverture par domaine, jalons à venir.",
+    features: ["Radar des domaines", "Initiatives récentes", "Citation du jour"],
+  },
+  {
+    title: "Initiatives",
+    icon: Layers,
+    desc: "Le cœur du produit. Fiches détaillées de ce qui marche ailleurs.",
+    features: ["Score de faisabilité", "Vue grille & tableau", "Export PDF"],
+  },
+  {
+    title: "Domaines",
+    icon: Globe2,
+    desc: "Vue par secteur : éducation, santé, énergie, justice, agriculture…",
+    features: ["Détection des lacunes", "Comparaison Bénin / référence", "Priorisation"],
+  },
+  {
+    title: "Réseau",
+    icon: Users2,
+    desc: "CRM léger des experts, investisseurs et collaborateurs identifiés.",
+    features: ["Pipeline de relation", "Score de potentiel", "Intervenants conf."],
+  },
+  {
+    title: "Roadmap",
+    icon: MapIcon,
+    desc: "Plan sur 5 ans découpé en jalons trimestriels.",
+    features: ["Timeline interactive", "Kanban par statut", "Progression globale"],
+  },
+  {
+    title: "Bibliothèque",
+    icon: BookOpen,
+    desc: "Livres, rapports, podcasts, documentaires — avec leçons extractibles.",
+    features: ["Statut lu / non lu", "Upload PDF", "Notation 5 étoiles"],
+  },
+  {
+    title: "Journal stratégique",
+    icon: PenLine,
+    desc: "Pensées, doutes, intuitions. Un éditeur rich-text et un mood tracker.",
+    features: ["Tiptap éditeur", "Tags & humeur", "Recherche full-text"],
+  },
+  {
+    title: "Conférence",
+    icon: Mic2,
+    desc: "Préparation de la conférence finale au Bénin : sessions, intervenants, logistique.",
+    features: ["Programme", "Budget prévisionnel", "Propositions finales"],
+  },
+  {
+    title: "Recherche globale",
+    icon: Search,
+    desc: "MeiliSearch sur toutes les entités : ultra rapide, résultats typés.",
+    features: ["Full-text", "Filtres avancés", "Résultats typés"],
+  },
+];
+
+function ModuleCard({
+  title,
+  desc,
+  icon: Icon,
+  features,
+  index,
+}: Mod & { index: number }) {
+  return (
+    <div
+      className="group p-8 h-full transition-all duration-500 hover:bg-[var(--alt)] relative overflow-hidden"
+      style={
+        {
+          background: C.surface,
+          ["--alt" as any]: C.surfaceAlt,
+        } as React.CSSProperties
+      }
+    >
+      <div className="flex items-start justify-between mb-6">
+        <div
+          className="w-12 h-12 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110"
+          style={{ background: C.accentSoft }}
+        >
+          <Icon className="w-6 h-6" style={{ color: C.primaryDark }} />
+        </div>
+        <span
+          className="text-xs tracking-[0.2em]"
+          style={{ fontFamily: "'JetBrains Mono', monospace", color: C.text2 }}
+        >
+          M0{index}
+        </span>
+      </div>
+
+      <h3
+        style={{
+          fontFamily: "'DM Serif Display', serif",
+          fontSize: "1.5rem",
+          color: C.ink,
+          lineHeight: 1.15,
+        }}
+      >
+        {title}
+      </h3>
+      <p className="mt-3 text-sm leading-relaxed" style={{ color: C.text2 }}>
+        {desc}
+      </p>
+
+      <ul className="mt-6 space-y-2">
+        {features.map((f) => (
+          <li key={f} className="flex items-center gap-2 text-xs" style={{ color: C.primary }}>
+            <div className="w-1 h-1 rounded-full" style={{ background: C.accent }} />
+            {f}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* -------- Phases section -------- */
+function PhasesSection() {
+  const phases = [
+    {
+      n: "Phase 01",
+      period: "Années 1–2",
+      title: "Solo",
+      access: "Privé",
+      desc: "Construction du socle. Tu remplis seul tous les modules core. La discipline d'observation devient une routine quotidienne.",
+      milestones: ["Plateforme déployée", "Premier domaine créé", "30 initiatives", "Roadmap complète"],
+    },
+    {
+      n: "Phase 02",
+      period: "Années 3–4",
+      title: "Collaboratif",
+      access: "5–10 invités",
+      desc: "Tu ouvres l'outil à un cercle de confiance : économistes, ingénieurs, chercheurs. Commentaires, co-rédaction, débats.",
+      milestones: ["500 initiatives", "3 collaborateurs actifs", "Bibliothèque > 50 ressources", "Premier rapport PDF"],
+    },
+    {
+      n: "Phase 03",
+      period: "Année 5",
+      title: "Public partiel",
+      access: "Lecture publique",
+      desc: "Certaines fiches deviennent publiques. SEO, partage. Génération d'un Livre Blanc. Préparation finale de la conférence au Bénin.",
+      milestones: ["Livre Blanc publié", "Conférence planifiée à 100%", "Domaine monpays.plus", "Communauté lancée"],
+    },
+  ];
+
+  return (
+    <section className="py-32 px-6 lg:px-12" style={{ background: C.primaryDark, color: C.surface }}>
+      <div
+        className="absolute inset-x-0"
+        style={{ backgroundImage: `url("${adinkraPattern}")`, opacity: 0.04 }}
+      />
+      <div className="max-w-7xl mx-auto relative">
+        <Reveal>
+          <div className="max-w-4xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-px w-10" style={{ background: C.accent }} />
+              <span
+                className="text-xs tracking-[0.3em] uppercase font-semibold"
+                style={{ fontFamily: "'JetBrains Mono', monospace", color: C.accent }}
+              >
+                03 · Trajectoire
+              </span>
+            </div>
+            <h2
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: "clamp(2rem, 4.5vw, 4rem)",
+                fontWeight: 700,
+                lineHeight: 1.05,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Trois phases. Un seul cap.
+            </h2>
+          </div>
+        </Reveal>
+
+        <div className="mt-20 space-y-8">
+          {phases.map((p, i) => (
+            <Reveal key={p.n} delay={i * 0.1}>
+              <div
+                className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-8 lg:p-12 rounded-2xl border transition-all hover:scale-[1.005]"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  borderColor: "rgba(212,168,83,0.2)",
+                }}
+              >
+                <div className="lg:col-span-3">
+                  <div
+                    className="text-xs tracking-[0.3em] uppercase mb-2"
+                    style={{ fontFamily: "'JetBrains Mono', monospace", color: C.accent }}
+                  >
+                    {p.n}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "'Playfair Display', serif",
+                      fontSize: "2.5rem",
+                      fontWeight: 700,
+                      color: C.surface,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {p.title}
+                  </div>
+                  <div className="mt-3 text-sm" style={{ color: C.accentSoft }}>
+                    {p.period} · {p.access}
+                  </div>
+                </div>
+                <div className="lg:col-span-5">
+                  <p className="text-base leading-relaxed" style={{ color: "rgba(250,246,241,0.8)" }}>
+                    {p.desc}
+                  </p>
+                </div>
+                <div className="lg:col-span-4">
+                  <ul className="space-y-3">
+                    {p.milestones.map((m) => (
+                      <li key={m} className="flex items-start gap-3 text-sm" style={{ color: C.surface }}>
+                        <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: C.accent }} />
+                        {m}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------- Stack technique -------- */
+function StackSection() {
+  const groups = [
+    {
+      icon: Palette,
+      title: "Frontend",
+      items: ["Next.js 14 (App Router)", "TypeScript", "shadcn/ui + Tailwind", "Zustand · React Query", "Tiptap · Recharts · dnd-kit", "Framer Motion"],
+    },
+    {
+      icon: Server,
+      title: "Backend",
+      items: ["NestJS · Node 20 LTS", "REST + tRPC", "NextAuth.js v5", "Prisma ORM · Zod", "Cloudinary · MeiliSearch", "Puppeteer (PDF) · xlsx"],
+    },
+    {
+      icon: Database,
+      title: "Données & infra",
+      items: ["PostgreSQL 16 · Supabase", "Redis · Upstash", "Vercel · Railway", "GitHub Actions", "Sentry monitoring", "monpays.plus"],
+    },
+  ];
+  return (
+    <section className="py-32 px-6 lg:px-12" style={{ background: C.surface }}>
+      <div className="max-w-7xl mx-auto">
+        <Reveal>
+          <SectionTitle eyebrow="04 · Stack technique" title="Choix techniques pensés pour durer." />
+        </Reveal>
+
+        <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
+          {groups.map((g, i) => (
+            <Reveal key={g.title} delay={i * 0.1}>
+              <div
+                className="p-8 rounded-2xl border h-full"
+                style={{ background: C.surfaceAlt, borderColor: C.border }}
+              >
+                <div
+                  className="w-12 h-12 rounded-lg flex items-center justify-center mb-6"
+                  style={{ background: C.primaryDark }}
+                >
+                  <g.icon className="w-6 h-6" style={{ color: C.accent }} />
+                </div>
+                <h3
+                  style={{
+                    fontFamily: "'DM Serif Display', serif",
+                    fontSize: "1.6rem",
+                    color: C.ink,
+                  }}
+                >
+                  {g.title}
+                </h3>
+                <ul className="mt-6 space-y-3">
+                  {g.items.map((it) => (
+                    <li
+                      key={it}
+                      className="text-sm pb-3 border-b last:border-0"
+                      style={{ color: C.ink, borderColor: C.border, fontFamily: "'JetBrains Mono', monospace" }}
+                    >
+                      {it}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------- KPI Roadmap -------- */
+function KPIRoadmapSection() {
+  const steps = [
+    { when: "Semaine 1", what: "Plateforme déployée, 1er domaine créé, 5 initiatives saisies" },
+    { when: "Mois 1", what: "30 initiatives documentées, roadmap complète" },
+    { when: "Mois 3", what: "100 initiatives, 20 contacts réseau, bibliothèque > 15 ressources" },
+    { when: "Mois 6", what: "200 initiatives couvrant 7 domaines, 1er rapport PDF exporté" },
+    { when: "An 2", what: "Ouverture à 3 collaborateurs, 500 initiatives" },
+    { when: "An 5", what: "Livre Blanc généré, conférence planifiée à 100%" },
+  ];
+  return (
+    <section className="py-32 px-6 lg:px-12" style={{ background: C.surfaceAlt }}>
+      <div className="max-w-5xl mx-auto">
+        <Reveal>
+          <SectionTitle eyebrow="05 · KPIs produit" title="Du premier jour à la conférence." />
+        </Reveal>
+
+        <div className="mt-20 relative">
+          {/* timeline line */}
+          <div
+            className="absolute left-[7px] top-2 bottom-2 w-px"
+            style={{ background: `linear-gradient(to bottom, ${C.primary}, ${C.accent})` }}
+          />
+          <div className="space-y-10">
+            {steps.map((s, i) => (
+              <Reveal key={s.when} delay={i * 0.08}>
+                <div className="flex gap-6 items-start">
+                  <div className="relative flex-shrink-0 mt-1">
+                    <Circle className="w-4 h-4 fill-current" style={{ color: C.accent }} />
+                  </div>
+                  <div className="flex-1 pb-6">
+                    <div
+                      className="text-xs tracking-[0.25em] uppercase mb-1"
+                      style={{ fontFamily: "'JetBrains Mono', monospace", color: C.primary }}
+                    >
+                      {s.when}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: "'DM Serif Display', serif",
+                        fontSize: "1.25rem",
+                        color: C.ink,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {s.what}
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------- Security -------- */
+function SecuritySection() {
+  const items = [
+    "Authentification email/password + 2FA optionnel",
+    "Routes protégées par middleware NextAuth",
+    "Données chiffrées at rest (Supabase)",
+    "Aucune donnée partagée sans action explicite",
+    "Export et suppression de compte (RGPD)",
+  ];
+  return (
+    <section className="py-32 px-6 lg:px-12" style={{ background: C.surface }}>
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+        <div className="lg:col-span-5">
+          <Reveal>
+            <SectionTitle eyebrow="06 · Sécurité & confidentialité" title="Un coffre-fort, pas une vitrine." />
+          </Reveal>
+          <Reveal delay={0.1}>
+            <p className="mt-8 text-lg leading-relaxed" style={{ color: C.text2 }}>
+              Ces réflexions sont stratégiques, personnelles, et parfois sensibles.
+              MonPays+ doit rester privé par défaut — et ne s'ouvrir que quand
+              tu décides, à qui tu décides.
+            </p>
+          </Reveal>
+        </div>
+
+        <div className="lg:col-span-7">
+          <Reveal delay={0.15}>
+            <div
+              className="p-10 rounded-2xl border"
+              style={{ background: C.surfaceAlt, borderColor: C.border }}
+            >
+              <Shield className="w-10 h-10 mb-6" style={{ color: C.primary }} />
+              <ul className="space-y-5">
+                {items.map((it) => (
+                  <li
+                    key={it}
+                    className="flex items-start gap-4 pb-5 border-b last:border-0 last:pb-0"
+                    style={{ borderColor: C.border }}
+                  >
+                    <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: C.accent }} />
+                    <span className="text-base" style={{ color: C.ink }}>
+                      {it}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
   );
 }
