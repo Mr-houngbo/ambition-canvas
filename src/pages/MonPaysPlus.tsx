@@ -1,884 +1,1875 @@
-import { useEffect, useRef, useState } from "react";
-import { motion, useScroll, useTransform, useInView } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Globe2,
-  Layers,
-  Users2,
-  Map as MapIcon,
-  BookOpen,
-  PenLine,
-  Mic2,
-  Search,
-  LayoutDashboard,
-  ArrowUpRight,
-  Sparkles,
-  Quote,
-  Shield,
-  Database,
-  Server,
-  Palette,
-  CheckCircle2,
-  Circle,
+  LayoutDashboard, Lightbulb, Layers, Users, Map, BookOpen, NotebookPen,
+  Mic2, Search, Plus, Trash2, Edit3, X, ExternalLink, Filter, Download,
+  TrendingUp, Globe2, Star, CheckCircle2, Circle, Clock, AlertCircle,
+  Pin, PinOff, ChevronRight, Save, Tag,
 } from "lucide-react";
-import Header from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
-/* ============ PALETTE — MonPays+ (PRD) ============
-   primary       #6B3A2A  marron profond
-   primary-light #9C5A3C
-   primary-dark  #3E1F13
-   accent        #D4A853  or savane
-   accent-soft   #F0D9A8
-   surface       #FAF6F1
-   surface-alt   #F0E8DC
-   text-primary  #1C1008
-   text-secondary#7A5C4A
-   border        #E2D0BE
-==================================================== */
-const C = {
-  primary: "#6B3A2A",
-  primaryLight: "#9C5A3C",
-  primaryDark: "#3E1F13",
-  accent: "#D4A853",
-  accentSoft: "#F0D9A8",
-  surface: "#FAF6F1",
-  surfaceAlt: "#F0E8DC",
-  ink: "#1C1008",
-  text2: "#7A5C4A",
-  border: "#E2D0BE",
+/* ───────────────────────── Types ───────────────────────── */
+type ID = string;
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+type Domain = {
+  id: ID; name: string; slug: string; icon: string; color: string;
+  description: string; priority: number;
+};
+type Initiative = {
+  id: ID; title: string; domainId: ID | ""; country: string; countryCode: string;
+  description: string; mechanism: string; conditions: string; obstacles: string;
+  feasibility: number; adaptation: string; cost: "low" | "medium" | "high" | "very_high";
+  timelineYears: number;
+  status: "draft" | "documented" | "analyzed" | "proposed";
+  pinned: boolean; sources: { url: string; title: string }[]; tags: string[];
+  createdAt: number;
+};
+type Contact = {
+  id: ID; name: string; role: string; expertise: string; country: string;
+  email: string; linkedin: string;
+  relationship: "identified" | "contacted" | "connected" | "collaborator" | "speaker";
+  potential: number; notes: string; createdAt: number;
+};
+type Milestone = {
+  id: ID; title: string; description: string; year: number; quarter: number;
+  status: "planned" | "in_progress" | "completed" | "delayed";
+};
+type Task = {
+  id: ID; milestoneId: ID; title: string; status: "todo" | "in_progress" | "done";
+  dueDate: string;
+};
+type LibraryItem = {
+  id: ID; title: string; author: string;
+  type: "book" | "article" | "report" | "video" | "podcast" | "documentary" | "other";
+  domainId: ID | ""; url: string; summary: string; lessons: string;
+  rating: number; isRead: boolean; createdAt: number;
+};
+type JournalEntry = {
+  id: ID; title: string; content: string;
+  mood: "motivated" | "reflective" | "doubtful" | "energized" | "focused";
+  tags: string; createdAt: number;
+};
+type ConferenceSession = {
+  id: ID; title: string; description: string;
+  type: "keynote" | "panel" | "workshop" | "presentation";
+  duration: number; domainId: ID | "";
+  status: "idea" | "confirmed" | "finalized";
+  speakerIds: ID[];
 };
 
-/* Adinkra-inspired SVG pattern (subtle, 4% opacity) */
-const adinkraPattern = `data:image/svg+xml;utf8,${encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>
-    <g fill='none' stroke='#6B3A2A' stroke-width='1'>
-      <circle cx='40' cy='40' r='14'/>
-      <circle cx='40' cy='40' r='6'/>
-      <path d='M40 6 L40 26 M40 54 L40 74 M6 40 L26 40 M54 40 L74 40'/>
-      <path d='M14 14 L26 26 M54 54 L66 66 M66 14 L54 26 M26 54 L14 66'/>
-    </g>
-  </svg>`
-)}`;
+type Store = {
+  domains: Domain[]; initiatives: Initiative[]; contacts: Contact[];
+  milestones: Milestone[]; tasks: Task[]; library: LibraryItem[];
+  journal: JournalEntry[]; sessions: ConferenceSession[];
+};
 
-/* ---------------- Hook: count up ---------------- */
-function useCountUp(target: number, duration = 1600, start = false) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (!start) return;
-    let raf = 0;
-    const t0 = performance.now();
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - t0) / duration);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setVal(Math.round(target * eased));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration, start]);
-  return val;
+const STORAGE_KEY = "monpaysplus_v1";
+
+const seedDomains: Domain[] = [
+  { id: uid(), name: "Éducation", slug: "education", icon: "📚", color: "#6B3A2A", description: "Systèmes éducatifs, réformes, pédagogie", priority: 1 },
+  { id: uid(), name: "Santé", slug: "sante", icon: "🩺", color: "#A63228", description: "Santé publique, accès aux soins", priority: 2 },
+  { id: uid(), name: "Économie", slug: "economie", icon: "📈", color: "#D4A853", description: "Modèles économiques, industrialisation", priority: 3 },
+  { id: uid(), name: "Agriculture", slug: "agriculture", icon: "🌾", color: "#4A7C59", description: "Souveraineté alimentaire, agroécologie", priority: 4 },
+  { id: uid(), name: "Gouvernance", slug: "gouvernance", icon: "⚖️", color: "#3E1F13", description: "Institutions, transparence, justice", priority: 5 },
+  { id: uid(), name: "Infrastructure", slug: "infrastructure", icon: "🏗️", color: "#9C5A3C", description: "Transports, énergie, numérique", priority: 6 },
+  { id: uid(), name: "Culture & Identité", slug: "culture", icon: "🎭", color: "#C4742A", description: "Patrimoine, langues, arts", priority: 7 },
+];
+
+const emptyStore: Store = {
+  domains: seedDomains, initiatives: [], contacts: [], milestones: [],
+  tasks: [], library: [], journal: [], sessions: [],
+};
+
+function loadStore(): Store {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return emptyStore;
+    return { ...emptyStore, ...JSON.parse(raw) };
+  } catch { return emptyStore; }
 }
+function saveStore(s: Store) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
 
-/* ---------------- Reveal helper ---------------- */
-function Reveal({ children, delay = 0, y = 24 }: { children: React.ReactNode; delay?: number; y?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
+/* ───────────────────────── Constants & helpers ───────────────────────── */
+const NAV = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "initiatives", label: "Initiatives", icon: Lightbulb },
+  { id: "domains", label: "Domaines", icon: Layers },
+  { id: "network", label: "Réseau", icon: Users },
+  { id: "roadmap", label: "Roadmap", icon: Map },
+  { id: "library", label: "Bibliothèque", icon: BookOpen },
+  { id: "journal", label: "Journal", icon: NotebookPen },
+  { id: "conference", label: "Conférence", icon: Mic2 },
+  { id: "search", label: "Recherche", icon: Search },
+] as const;
+type Tab = typeof NAV[number]["id"];
+
+const costLabel = { low: "Faible", medium: "Moyen", high: "Élevé", very_high: "Très élevé" } as const;
+const statusLabel = { draft: "Brouillon", documented: "Documenté", analyzed: "Analysé", proposed: "Proposé" } as const;
+const relLabel = { identified: "Identifié", contacted: "Contacté", connected: "Connecté", collaborator: "Collaborateur", speaker: "Intervenant" } as const;
+const milestoneStatusLabel = { planned: "Planifié", in_progress: "En cours", completed: "Terminé", delayed: "Retardé" } as const;
+
+const fmt = (t: number) => new Date(t).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+
+/* ───────────────────────── Page ───────────────────────── */
+export default function MonPaysPlus() {
+  const [store, setStore] = useState<Store>(() => loadStore());
+  const [tab, setTab] = useState<Tab>("dashboard");
+
+  useEffect(() => { saveStore(store); }, [store]);
+  useEffect(() => {
+    document.title = "MonPays+ — Observer le monde. Construire le Bénin.";
+  }, []);
+
+  const update = <K extends keyof Store>(key: K, value: Store[K]) =>
+    setStore((s) => ({ ...s, [key]: value }));
+
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {children}
-    </motion.div>
+    <div className="min-h-screen" style={{ background: "var(--mpp-surface)" }}>
+      <Style />
+      <div className="flex">
+        <Sidebar tab={tab} onChange={setTab} store={store} />
+        <main className="flex-1 min-h-screen p-6 md:p-10 lg:pl-12 overflow-x-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+            >
+              {tab === "dashboard" && <DashboardView store={store} onJump={setTab} />}
+              {tab === "initiatives" && (
+                <InitiativesView
+                  store={store}
+                  onChange={(v) => update("initiatives", v)}
+                />
+              )}
+              {tab === "domains" && (
+                <DomainsView store={store} onChange={(v) => update("domains", v)} />
+              )}
+              {tab === "network" && (
+                <NetworkView store={store} onChange={(v) => update("contacts", v)} />
+              )}
+              {tab === "roadmap" && (
+                <RoadmapView
+                  store={store}
+                  onChangeM={(v) => update("milestones", v)}
+                  onChangeT={(v) => update("tasks", v)}
+                />
+              )}
+              {tab === "library" && (
+                <LibraryView store={store} onChange={(v) => update("library", v)} />
+              )}
+              {tab === "journal" && (
+                <JournalView store={store} onChange={(v) => update("journal", v)} />
+              )}
+              {tab === "conference" && (
+                <ConferenceView store={store} onChange={(v) => update("sessions", v)} />
+              )}
+              {tab === "search" && <SearchView store={store} onJump={setTab} />}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
+    </div>
   );
 }
 
-/* =================================================
-   PAGE
-================================================= */
-export default function MonPaysPlus() {
-  /* Load fonts */
-  useEffect(() => {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Serif+Display&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap";
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
+/* ───────────────────────── Style tokens (scoped) ───────────────────────── */
+function Style() {
+  return (
+    <style>{`
+      :root {
+        --mpp-primary:#6B3A2A;
+        --mpp-primary-light:#9C5A3C;
+        --mpp-primary-dark:#3E1F13;
+        --mpp-accent:#D4A853;
+        --mpp-accent-soft:#F0D9A8;
+        --mpp-surface:#FAF6F1;
+        --mpp-surface-alt:#F0E8DC;
+        --mpp-text:#1C1008;
+        --mpp-text-2:#7A5C4A;
+        --mpp-border:#E2D0BE;
+        --mpp-success:#4A7C59;
+        --mpp-warning:#C4742A;
+        --mpp-danger:#A63228;
+      }
+      .mpp-h { font-family: 'Playfair Display', serif; letter-spacing:-0.01em; color: var(--mpp-text); }
+      .mpp-sub { font-family: 'DM Serif Display', serif; color: var(--mpp-primary-dark); }
+      .mpp-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; }
+      .mpp-card {
+        background:#fff; border:1px solid var(--mpp-border); border-radius:16px;
+        box-shadow: 0 1px 0 rgba(62,31,19,.04), 0 8px 24px -16px rgba(62,31,19,.18);
+      }
+      .mpp-pattern {
+        background-image:
+          radial-gradient(circle at 1px 1px, rgba(107,58,42,0.07) 1px, transparent 0);
+        background-size: 18px 18px;
+      }
+    `}</style>
+  );
+}
 
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 140]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
+/* ───────────────────────── Sidebar ───────────────────────── */
+function Sidebar({
+  tab, onChange, store,
+}: { tab: Tab; onChange: (t: Tab) => void; store: Store }) {
+  const counts: Record<string, number> = {
+    initiatives: store.initiatives.length,
+    domains: store.domains.length,
+    network: store.contacts.length,
+    roadmap: store.milestones.length,
+    library: store.library.length,
+    journal: store.journal.length,
+    conference: store.sessions.length,
+  };
+  return (
+    <aside
+      className="hidden md:flex flex-col w-64 shrink-0 min-h-screen p-5 gap-1 sticky top-0"
+      style={{ background: "var(--mpp-primary-dark)", color: "#F0E8DC" }}
+    >
+      <div className="mb-6">
+        <div className="mpp-sub text-2xl" style={{ color: "var(--mpp-accent)" }}>
+          MonPays<span style={{ color: "#fff" }}>+</span>
+        </div>
+        <div className="text-[11px] mt-1 opacity-70 tracking-wide uppercase">
+          Observer · Construire
+        </div>
+      </div>
+
+      {NAV.map(({ id, label, icon: Icon }) => {
+        const active = tab === id;
+        const count = counts[id];
+        return (
+          <button
+            key={id}
+            onClick={() => onChange(id)}
+            className="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all"
+            style={{
+              background: active ? "rgba(212,168,83,0.16)" : "transparent",
+              color: active ? "var(--mpp-accent)" : "#F0E8DC",
+            }}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-left">{label}</span>
+            {count != null && count > 0 && (
+              <span
+                className="mpp-mono text-[10px] px-1.5 py-0.5 rounded"
+                style={{
+                  background: active ? "var(--mpp-accent)" : "rgba(255,255,255,0.08)",
+                  color: active ? "var(--mpp-primary-dark)" : "#F0E8DC",
+                }}
+              >
+                {count}
+              </span>
+            )}
+          </button>
+        );
+      })}
+
+      <div className="mt-auto pt-4 border-t border-white/10 text-[11px] opacity-60">
+        Données stockées localement.<br />Phase 1 — Solo.
+      </div>
+    </aside>
+  );
+}
+
+/* ───────────────────────── Shared atoms ───────────────────────── */
+function PageHeader({
+  title, subtitle, action,
+}: { title: string; subtitle?: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-end justify-between gap-4 flex-wrap mb-8">
+      <div>
+        <h1 className="mpp-h text-3xl md:text-4xl">{title}</h1>
+        {subtitle && (
+          <p className="mt-1 text-sm" style={{ color: "var(--mpp-text-2)" }}>
+            {subtitle}
+          </p>
+        )}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function EmptyState({
+  icon: Icon, title, hint, action,
+}: { icon: any; title: string; hint: string; action?: React.ReactNode }) {
+  return (
+    <div className="mpp-card p-12 text-center">
+      <div
+        className="mx-auto h-14 w-14 rounded-full grid place-items-center mb-4"
+        style={{ background: "var(--mpp-accent-soft)", color: "var(--mpp-primary-dark)" }}
+      >
+        <Icon className="h-7 w-7" />
+      </div>
+      <div className="mpp-sub text-xl">{title}</div>
+      <p className="mt-1 text-sm" style={{ color: "var(--mpp-text-2)" }}>{hint}</p>
+      {action && <div className="mt-5">{action}</div>}
+    </div>
+  );
+}
+
+function Stat({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
+  return (
+    <div className="mpp-card p-5">
+      <div className="text-[11px] uppercase tracking-wider" style={{ color: "var(--mpp-text-2)" }}>
+        {label}
+      </div>
+      <div className="mpp-mono text-3xl mt-2" style={{ color: "var(--mpp-primary-dark)" }}>
+        {value}
+      </div>
+      {hint && <div className="text-xs mt-1" style={{ color: "var(--mpp-text-2)" }}>{hint}</div>}
+    </div>
+  );
+}
+
+/* ───────────────────────── Dashboard ───────────────────────── */
+function DashboardView({ store, onJump }: { store: Store; onJump: (t: Tab) => void }) {
+  const avgFeas = useMemo(() => {
+    if (!store.initiatives.length) return 0;
+    return (
+      store.initiatives.reduce((a, b) => a + b.feasibility, 0) / store.initiatives.length
+    );
+  }, [store.initiatives]);
+
+  const coverage = useMemo(() => {
+    return store.domains.map((d) => ({
+      ...d,
+      count: store.initiatives.filter((i) => i.domainId === d.id).length,
+    }));
+  }, [store.domains, store.initiatives]);
+
+  const maxCount = Math.max(1, ...coverage.map((c) => c.count));
+  const pinned = store.initiatives.filter((i) => i.pinned).slice(0, 4);
+  const recent = [...store.initiatives].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+  const nextMilestones = [...store.milestones]
+    .filter((m) => m.status !== "completed")
+    .sort((a, b) => a.year - b.year || a.quarter - b.quarter)
+    .slice(0, 4);
 
   return (
-    <div
-      style={{
-        background: C.surface,
-        color: C.ink,
-        fontFamily: "'Inter', sans-serif",
-      }}
-      className="min-h-screen"
-    >
-      <Header />
+    <>
+      <PageHeader
+        title="Tableau de bord"
+        subtitle="Vue d'ensemble de ton observation du monde, orientée Bénin."
+      />
 
-      {/* ============= HERO ============= */}
-      <section
-        ref={heroRef}
-        className="relative overflow-hidden"
-        style={{
-          background: `linear-gradient(180deg, ${C.surface} 0%, ${C.surfaceAlt} 100%)`,
-        }}
-      >
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url("${adinkraPattern}")`,
-            opacity: 0.04,
-          }}
-        />
-        {/* soft golden glow */}
-        <div
-          className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full blur-3xl"
-          style={{ background: `radial-gradient(circle, ${C.accent}40, transparent 70%)` }}
-        />
-        <div
-          className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full blur-3xl"
-          style={{ background: `radial-gradient(circle, ${C.primary}30, transparent 70%)` }}
-        />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <Stat label="Initiatives" value={store.initiatives.length} hint="documentées" />
+        <Stat label="Contacts" value={store.contacts.length} hint="réseau actif" />
+        <Stat label="Ressources" value={store.library.length} hint="bibliothèque" />
+        <Stat label="Faisabilité moy." value={avgFeas.toFixed(1)} hint="sur 10" />
+      </div>
 
-        <motion.div
-          style={{ y: heroY, opacity: heroOpacity }}
-          className="relative max-w-7xl mx-auto px-6 lg:px-12 pt-32 pb-40"
-        >
-          {/* Eyebrow */}
-          <Reveal>
-            <div className="flex items-center gap-3 mb-10">
-              <div className="h-px w-12" style={{ background: C.primary }} />
-              <span
-                className="text-xs tracking-[0.3em] uppercase font-semibold"
-                style={{ fontFamily: "'JetBrains Mono', monospace", color: C.primary }}
+      <div className="grid lg:grid-cols-3 gap-6 mb-8">
+        <div className="mpp-card p-6 lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <div className="mpp-sub text-lg">Couverture par domaine</div>
+            <button
+              onClick={() => onJump("domains")}
+              className="text-xs flex items-center gap-1 hover:underline"
+              style={{ color: "var(--mpp-primary)" }}
+            >
+              Voir les domaines <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            {coverage.map((d) => (
+              <div key={d.id}>
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="flex items-center gap-2">
+                    <span>{d.icon}</span>
+                    <span style={{ color: "var(--mpp-text)" }}>{d.name}</span>
+                  </span>
+                  <span className="mpp-mono text-xs" style={{ color: "var(--mpp-text-2)" }}>
+                    {d.count}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--mpp-surface-alt)" }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(d.count / maxCount) * 100}%` }}
+                    transition={{ duration: 0.6 }}
+                    className="h-full rounded-full"
+                    style={{ background: d.color }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mpp-card p-6">
+          <div className="mpp-sub text-lg mb-4">Prochains jalons</div>
+          {nextMilestones.length === 0 ? (
+            <div className="text-sm" style={{ color: "var(--mpp-text-2)" }}>
+              Aucun jalon planifié.
+              <button
+                onClick={() => onJump("roadmap")}
+                className="block mt-2 underline"
+                style={{ color: "var(--mpp-primary)" }}
               >
-                PRD v1.0 · Application personnelle stratégique
-              </span>
+                Créer ta roadmap →
+              </button>
             </div>
-          </Reveal>
-
-          {/* Title */}
-          <Reveal delay={0.1}>
-            <h1
-              className="leading-[0.92] tracking-tight"
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                fontWeight: 900,
-                fontSize: "clamp(3.5rem, 9vw, 8rem)",
-                color: C.ink,
-              }}
-            >
-              MonPays<span style={{ color: C.accent }}>+</span>
-            </h1>
-          </Reveal>
-
-          <Reveal delay={0.2}>
-            <p
-              className="mt-8 max-w-3xl leading-tight"
-              style={{
-                fontFamily: "'DM Serif Display', serif",
-                fontSize: "clamp(1.5rem, 2.6vw, 2.4rem)",
-                color: C.primary,
-              }}
-            >
-              Observer le monde. Construire le Bénin.
-            </p>
-          </Reveal>
-
-          <Reveal delay={0.3}>
-            <p
-              className="mt-8 max-w-2xl text-lg leading-relaxed"
-              style={{ color: C.text2 }}
-            >
-              Une plateforme hybride entre <strong style={{ color: C.ink }}>knowledge base</strong>,{" "}
-              <strong style={{ color: C.ink }}>think tank personnel</strong> et{" "}
-              <strong style={{ color: C.ink }}>outil de planification stratégique</strong>. Recenser, analyser
-              et adapter ce que d'autres pays font de mieux — pour préparer une transformation
-              durable du Bénin sur 5 à 10 ans.
-            </p>
-          </Reveal>
-
-          {/* Meta grid */}
-          <Reveal delay={0.4}>
-            <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-px" style={{ background: C.border }}>
-              {[
-                { k: "Horizon", v: "5 ans" },
-                { k: "Phases", v: "3" },
-                { k: "Modules", v: "9" },
-                { k: "Statut", v: "v1.0" },
-              ].map((m) => (
-                <div key={m.k} className="p-6" style={{ background: C.surface }}>
+          ) : (
+            <ul className="space-y-3">
+              {nextMilestones.map((m) => (
+                <li key={m.id} className="flex items-start gap-3">
                   <div
-                    className="text-[10px] tracking-[0.25em] uppercase mb-2"
-                    style={{ fontFamily: "'JetBrains Mono', monospace", color: C.text2 }}
+                    className="mpp-mono text-[11px] px-2 py-1 rounded mt-0.5"
+                    style={{ background: "var(--mpp-accent-soft)", color: "var(--mpp-primary-dark)" }}
                   >
-                    {m.k}
+                    A{m.year}T{m.quarter || 1}
                   </div>
-                  <div
-                    style={{
-                      fontFamily: "'Playfair Display', serif",
-                      fontSize: "2rem",
-                      fontWeight: 700,
-                      color: C.primary,
-                    }}
-                  >
-                    {m.v}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color: "var(--mpp-text)" }}>
+                      {m.title}
+                    </div>
+                    <div className="text-xs" style={{ color: "var(--mpp-text-2)" }}>
+                      {milestoneStatusLabel[m.status]}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="mpp-card p-6">
+          <div className="mpp-sub text-lg mb-4 flex items-center gap-2">
+            <Pin className="h-4 w-4" /> Initiatives épinglées
+          </div>
+          {pinned.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--mpp-text-2)" }}>
+              Épingle des initiatives clés depuis l'onglet Initiatives.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {pinned.map((i) => (
+                <div key={i.id} className="p-3 rounded-lg" style={{ background: "var(--mpp-surface-alt)" }}>
+                  <div className="text-sm font-medium" style={{ color: "var(--mpp-text)" }}>{i.title}</div>
+                  <div className="text-xs mt-0.5" style={{ color: "var(--mpp-text-2)" }}>
+                    {i.country || "—"} · Faisabilité {i.feasibility}/10
                   </div>
                 </div>
               ))}
             </div>
-          </Reveal>
-        </motion.div>
-
-        {/* scroll cue */}
-        <div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-xs tracking-[0.3em] uppercase"
-          style={{ color: C.text2, fontFamily: "'JetBrains Mono', monospace" }}
-        >
-          <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-            Découvrir ↓
-          </motion.div>
+          )}
         </div>
-      </section>
 
-      {/* ============= MANIFESTO / QUOTE ============= */}
-      <section
-        className="relative py-32 overflow-hidden"
-        style={{ background: C.primaryDark, color: C.surface }}
-      >
-        <div
-          className="absolute inset-0"
-          style={{ backgroundImage: `url("${adinkraPattern}")`, opacity: 0.05 }}
-        />
-        <div className="relative max-w-5xl mx-auto px-6 lg:px-12">
-          <Reveal>
-            <Quote className="w-12 h-12 mb-8" style={{ color: C.accent }} />
-          </Reveal>
-          <Reveal delay={0.1}>
-            <blockquote
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: "clamp(1.6rem, 3vw, 2.8rem)",
-                lineHeight: 1.25,
-                fontWeight: 400,
-              }}
-            >
-              « Je n'ai pas besoin d'attendre d'être au pouvoir pour commencer.
-              Je dois <em style={{ color: C.accent }}>observer maintenant</em>,
-              documenter méthodiquement, et bâtir un capital intellectuel et humain
-              que je ramènerai au Bénin — pour transformer ce que j'ai vu de mieux
-              chez les autres en réalité chez moi. »
-            </blockquote>
-          </Reveal>
-          <Reveal delay={0.2}>
-            <div className="mt-10 flex items-center gap-4">
-              <div className="h-px w-12" style={{ background: C.accent }} />
-              <span
-                className="text-xs tracking-[0.3em] uppercase"
-                style={{ fontFamily: "'JetBrains Mono', monospace", color: C.accent }}
-              >
-                Vision fondatrice
-              </span>
+        <div className="mpp-card p-6">
+          <div className="mpp-sub text-lg mb-4">Récemment ajoutées</div>
+          {recent.length === 0 ? (
+            <EmptyState
+              icon={Lightbulb}
+              title="Aucune initiative encore"
+              hint="Commence par documenter ce qui marche ailleurs."
+              action={<Button onClick={() => onJump("initiatives")} style={{ background: "var(--mpp-primary)" }}>
+                <Plus className="h-4 w-4 mr-1" /> Ajouter une initiative
+              </Button>}
+            />
+          ) : (
+            <div className="space-y-2">
+              {recent.map((i) => (
+                <div key={i.id} className="flex items-center justify-between p-2 hover:bg-[var(--mpp-surface-alt)] rounded-lg">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color: "var(--mpp-text)" }}>{i.title}</div>
+                    <div className="text-xs" style={{ color: "var(--mpp-text-2)" }}>{i.country} · {fmt(i.createdAt)}</div>
+                  </div>
+                  <Badge variant="outline" className="mpp-mono text-[10px]">
+                    {statusLabel[i.status]}
+                  </Badge>
+                </div>
+              ))}
             </div>
-          </Reveal>
+          )}
         </div>
-      </section>
-
-      {/* ============= KPIs / STATS ============= */}
-      <KPIsSection />
-
-      {/* ============= 9 MODULES ============= */}
-      <section className="py-32 px-6 lg:px-12" style={{ background: C.surface }}>
-        <div className="max-w-7xl mx-auto">
-          <Reveal>
-            <SectionTitle eyebrow="02 · Architecture produit" title="9 modules pour penser, documenter, agir" />
-          </Reveal>
-
-          <div className="mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px"
-               style={{ background: C.border }}>
-            {MODULES.map((m, i) => (
-              <Reveal key={m.title} delay={i * 0.05}>
-                <ModuleCard {...m} index={i + 1} />
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ============= PHASES ============= */}
-      <PhasesSection />
-
-      {/* ============= STACK TECHNIQUE ============= */}
-      <StackSection />
-
-      {/* ============= KPIs ROADMAP ============= */}
-      <KPIRoadmapSection />
-
-      {/* ============= SÉCURITÉ ============= */}
-      <SecuritySection />
-
-      {/* ============= FOOTER MANIFESTO ============= */}
-      <section
-        className="py-32 px-6 lg:px-12 text-center relative overflow-hidden"
-        style={{ background: C.surfaceAlt }}
-      >
-        <div
-          className="absolute inset-0"
-          style={{ backgroundImage: `url("${adinkraPattern}")`, opacity: 0.05 }}
-        />
-        <div className="relative max-w-3xl mx-auto">
-          <Reveal>
-            <Sparkles className="w-10 h-10 mx-auto mb-8" style={{ color: C.accent }} />
-          </Reveal>
-          <Reveal delay={0.1}>
-            <h2
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: "clamp(2rem, 4vw, 3.5rem)",
-                fontWeight: 700,
-                lineHeight: 1.1,
-                color: C.primaryDark,
-              }}
-            >
-              Ce projet n'est pas une idée.
-              <br />
-              <span style={{ color: C.accent }}>C'est un engagement.</span>
-            </h2>
-          </Reveal>
-          <Reveal delay={0.2}>
-            <p className="mt-8 text-lg leading-relaxed" style={{ color: C.text2 }}>
-              Dans 5 ou 10 ans, je reviendrai au Bénin avec des amis — économistes,
-              investisseurs, bâtisseurs. Nous organiserons une conférence. Tout ce
-              qui aura été documenté ici servira de socle. MonPays+ est l'outil
-              qui rend cela possible.
-            </p>
-          </Reveal>
-          <Reveal delay={0.3}>
-            <div
-              className="inline-flex items-center gap-3 mt-12 px-8 py-4 rounded-full"
-              style={{ background: C.primaryDark, color: C.surface }}
-            >
-              <span style={{ fontFamily: "'JetBrains Mono', monospace" }} className="text-xs tracking-[0.3em] uppercase">
-                Bénin · 2030
-              </span>
-              <ArrowUpRight className="w-4 h-4" style={{ color: C.accent }} />
-            </div>
-          </Reveal>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-/* ===========================================================
-   COMPONENTS
-=========================================================== */
-
-function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
-  return (
-    <div className="max-w-4xl">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="h-px w-10" style={{ background: C.primary }} />
-        <span
-          className="text-xs tracking-[0.3em] uppercase font-semibold"
-          style={{ fontFamily: "'JetBrains Mono', monospace", color: C.primary }}
-        >
-          {eyebrow}
-        </span>
       </div>
-      <h2
+
+      <div
+        className="mt-8 p-6 md:p-8 rounded-2xl border"
         style={{
-          fontFamily: "'Playfair Display', serif",
-          fontSize: "clamp(2rem, 4.5vw, 4rem)",
-          fontWeight: 700,
-          lineHeight: 1.05,
-          color: C.ink,
-          letterSpacing: "-0.02em",
+          background: "linear-gradient(135deg, var(--mpp-primary-dark), var(--mpp-primary))",
+          borderColor: "var(--mpp-primary-dark)",
         }}
       >
-        {title}
-      </h2>
-    </div>
+        <div className="mpp-sub text-sm tracking-wide" style={{ color: "var(--mpp-accent)" }}>
+          ✦ Pensée du jour
+        </div>
+        <p className="mpp-h text-xl md:text-2xl mt-2 max-w-3xl" style={{ color: "#FAF6F1" }}>
+          « Aucun pays ne s'est jamais développé en imitant aveuglément.
+          Il s'agit d'observer, comprendre, adapter — patiemment. »
+        </p>
+      </div>
+    </>
   );
 }
 
-/* -------- KPIs hero stats -------- */
-function KPIsSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
-  const kpis = [
-    { label: "Initiatives à documenter", target: 500, suffix: "+" },
-    { label: "Domaines couverts", target: 7 },
-    { label: "Contacts réseau", target: 20, suffix: "+" },
-    { label: "Années d'horizon", target: 5 },
-  ];
+/* ───────────────────────── Initiatives ───────────────────────── */
+function InitiativesView({
+  store, onChange,
+}: { store: Store; onChange: (v: Initiative[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Initiative | null>(null);
+  const [filterDomain, setFilterDomain] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    return store.initiatives.filter((i) => {
+      if (filterDomain !== "all" && i.domainId !== filterDomain) return false;
+      if (filterStatus !== "all" && i.status !== filterStatus) return false;
+      if (q && !(i.title + " " + i.country + " " + i.description)
+        .toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    }).sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.createdAt - a.createdAt);
+  }, [store.initiatives, filterDomain, filterStatus, q]);
+
+  const save = (data: Initiative) => {
+    const exists = store.initiatives.some((i) => i.id === data.id);
+    onChange(exists
+      ? store.initiatives.map((i) => i.id === data.id ? data : i)
+      : [data, ...store.initiatives]);
+    toast.success(exists ? "Initiative mise à jour" : "Initiative ajoutée");
+    setOpen(false); setEditing(null);
+  };
+
+  const remove = (id: ID) => {
+    onChange(store.initiatives.filter((i) => i.id !== id));
+    toast.success("Supprimée");
+  };
+
+  const togglePin = (id: ID) => {
+    onChange(store.initiatives.map((i) => i.id === id ? { ...i, pinned: !i.pinned } : i));
+  };
+
   return (
-    <section ref={ref} className="py-24 px-6 lg:px-12" style={{ background: C.surfaceAlt }}>
-      <div className="max-w-7xl mx-auto">
-        <Reveal>
-          <SectionTitle eyebrow="01 · Ambition mesurable" title="Des chiffres pour ancrer la vision." />
-        </Reveal>
-        <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {kpis.map((k, i) => {
-            const v = useCountUp(k.target, 1800, inView);
+    <>
+      <PageHeader
+        title="Initiatives"
+        subtitle="Le cœur du produit. Chaque fiche = une idée observée ailleurs, à adapter."
+        action={
+          <Button
+            onClick={() => { setEditing(null); setOpen(true); }}
+            style={{ background: "var(--mpp-primary)" }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Nouvelle initiative
+          </Button>
+        }
+      />
+
+      <div className="mpp-card p-4 mb-6 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--mpp-text-2)]" />
+          <Input
+            value={q} onChange={(e) => setQ(e.target.value)}
+            placeholder="Rechercher (titre, pays, description)…"
+            className="pl-9"
+          />
+        </div>
+        <Select value={filterDomain} onValueChange={setFilterDomain}>
+          <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les domaines</SelectItem>
+            {store.domains.map((d) => (
+              <SelectItem key={d.id} value={d.id}>{d.icon} {d.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous statuts</SelectItem>
+            {Object.entries(statusLabel).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={Lightbulb}
+          title="Aucune initiative"
+          hint="Commence par en saisir une — un programme, une réforme, une idée vue ailleurs."
+          action={<Button onClick={() => { setEditing(null); setOpen(true); }} style={{ background: "var(--mpp-primary)" }}>
+            <Plus className="h-4 w-4 mr-1" /> Ajouter
+          </Button>}
+        />
+      ) : (
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map((i) => {
+            const domain = store.domains.find((d) => d.id === i.domainId);
             return (
-              <Reveal key={k.label} delay={i * 0.08}>
-                <div className="border-l-2 pl-6" style={{ borderColor: C.accent }}>
-                  <div
-                    style={{
-                      fontFamily: "'Playfair Display', serif",
-                      fontSize: "clamp(3rem, 6vw, 5rem)",
-                      fontWeight: 900,
-                      color: C.primary,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {v}
-                    {k.suffix || ""}
+              <motion.div
+                key={i.id} layout
+                className="mpp-card p-5 flex flex-col"
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 text-xs">
+                    {domain && (
+                      <span
+                        className="px-2 py-0.5 rounded"
+                        style={{ background: domain.color + "1a", color: domain.color }}
+                      >
+                        {domain.icon} {domain.name}
+                      </span>
+                    )}
+                    {i.country && (
+                      <span className="mpp-mono text-[10px]" style={{ color: "var(--mpp-text-2)" }}>
+                        {i.countryCode || ""} {i.country}
+                      </span>
+                    )}
                   </div>
-                  <div
-                    className="mt-3 text-sm leading-snug"
-                    style={{ color: C.text2 }}
-                  >
-                    {k.label}
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => togglePin(i.id)} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                      {i.pinned ? <Pin className="h-3.5 w-3.5" style={{ color: "var(--mpp-accent)" }} /> : <PinOff className="h-3.5 w-3.5 text-[var(--mpp-text-2)]" />}
+                    </button>
                   </div>
                 </div>
-              </Reveal>
+
+                <div className="mpp-sub text-lg leading-snug" style={{ color: "var(--mpp-text)" }}>
+                  {i.title}
+                </div>
+                <p className="text-sm mt-2 line-clamp-3" style={{ color: "var(--mpp-text-2)" }}>
+                  {i.description || "Aucune description."}
+                </p>
+
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-[11px] mb-1" style={{ color: "var(--mpp-text-2)" }}>
+                    <span>Faisabilité Bénin</span>
+                    <span className="mpp-mono">{i.feasibility}/10</span>
+                  </div>
+                  <Progress value={i.feasibility * 10} className="h-1.5" />
+                </div>
+
+                <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--mpp-border)]">
+                  <div className="flex items-center gap-2 text-[11px]" style={{ color: "var(--mpp-text-2)" }}>
+                    <Badge variant="outline" className="text-[10px]">{statusLabel[i.status]}</Badge>
+                    <span>· Coût {costLabel[i.cost]}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => { setEditing(i); setOpen(true); }} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                      <Edit3 className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => remove(i.id)} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                      <Trash2 className="h-3.5 w-3.5 text-[var(--mpp-danger)]" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
             );
           })}
         </div>
-      </div>
-    </section>
-  );
-}
+      )}
 
-/* -------- Module card -------- */
-type Mod = {
-  title: string;
-  desc: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-  features: string[];
-};
-
-const MODULES: Mod[] = [
-  {
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    desc: "Vue d'ensemble : stats globales, couverture par domaine, jalons à venir.",
-    features: ["Radar des domaines", "Initiatives récentes", "Citation du jour"],
-  },
-  {
-    title: "Initiatives",
-    icon: Layers,
-    desc: "Le cœur du produit. Fiches détaillées de ce qui marche ailleurs.",
-    features: ["Score de faisabilité", "Vue grille & tableau", "Export PDF"],
-  },
-  {
-    title: "Domaines",
-    icon: Globe2,
-    desc: "Vue par secteur : éducation, santé, énergie, justice, agriculture…",
-    features: ["Détection des lacunes", "Comparaison Bénin / référence", "Priorisation"],
-  },
-  {
-    title: "Réseau",
-    icon: Users2,
-    desc: "CRM léger des experts, investisseurs et collaborateurs identifiés.",
-    features: ["Pipeline de relation", "Score de potentiel", "Intervenants conf."],
-  },
-  {
-    title: "Roadmap",
-    icon: MapIcon,
-    desc: "Plan sur 5 ans découpé en jalons trimestriels.",
-    features: ["Timeline interactive", "Kanban par statut", "Progression globale"],
-  },
-  {
-    title: "Bibliothèque",
-    icon: BookOpen,
-    desc: "Livres, rapports, podcasts, documentaires — avec leçons extractibles.",
-    features: ["Statut lu / non lu", "Upload PDF", "Notation 5 étoiles"],
-  },
-  {
-    title: "Journal stratégique",
-    icon: PenLine,
-    desc: "Pensées, doutes, intuitions. Un éditeur rich-text et un mood tracker.",
-    features: ["Tiptap éditeur", "Tags & humeur", "Recherche full-text"],
-  },
-  {
-    title: "Conférence",
-    icon: Mic2,
-    desc: "Préparation de la conférence finale au Bénin : sessions, intervenants, logistique.",
-    features: ["Programme", "Budget prévisionnel", "Propositions finales"],
-  },
-  {
-    title: "Recherche globale",
-    icon: Search,
-    desc: "MeiliSearch sur toutes les entités : ultra rapide, résultats typés.",
-    features: ["Full-text", "Filtres avancés", "Résultats typés"],
-  },
-];
-
-function ModuleCard({
-  title,
-  desc,
-  icon: Icon,
-  features,
-  index,
-}: Mod & { index: number }) {
-  return (
-    <div
-      className="group p-8 h-full transition-all duration-500 hover:bg-[var(--alt)] relative overflow-hidden"
-      style={
-        {
-          background: C.surface,
-          ["--alt" as any]: C.surfaceAlt,
-        } as React.CSSProperties
-      }
-    >
-      <div className="flex items-start justify-between mb-6">
-        <div
-          className="w-12 h-12 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110"
-          style={{ background: C.accentSoft }}
-        >
-          <Icon className="w-6 h-6" style={{ color: C.primaryDark }} />
-        </div>
-        <span
-          className="text-xs tracking-[0.2em]"
-          style={{ fontFamily: "'JetBrains Mono', monospace", color: C.text2 }}
-        >
-          M0{index}
-        </span>
-      </div>
-
-      <h3
-        style={{
-          fontFamily: "'DM Serif Display', serif",
-          fontSize: "1.5rem",
-          color: C.ink,
-          lineHeight: 1.15,
-        }}
-      >
-        {title}
-      </h3>
-      <p className="mt-3 text-sm leading-relaxed" style={{ color: C.text2 }}>
-        {desc}
-      </p>
-
-      <ul className="mt-6 space-y-2">
-        {features.map((f) => (
-          <li key={f} className="flex items-center gap-2 text-xs" style={{ color: C.primary }}>
-            <div className="w-1 h-1 rounded-full" style={{ background: C.accent }} />
-            {f}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/* -------- Phases section -------- */
-function PhasesSection() {
-  const phases = [
-    {
-      n: "Phase 01",
-      period: "Années 1–2",
-      title: "Solo",
-      access: "Privé",
-      desc: "Construction du socle. Tu remplis seul tous les modules core. La discipline d'observation devient une routine quotidienne.",
-      milestones: ["Plateforme déployée", "Premier domaine créé", "30 initiatives", "Roadmap complète"],
-    },
-    {
-      n: "Phase 02",
-      period: "Années 3–4",
-      title: "Collaboratif",
-      access: "5–10 invités",
-      desc: "Tu ouvres l'outil à un cercle de confiance : économistes, ingénieurs, chercheurs. Commentaires, co-rédaction, débats.",
-      milestones: ["500 initiatives", "3 collaborateurs actifs", "Bibliothèque > 50 ressources", "Premier rapport PDF"],
-    },
-    {
-      n: "Phase 03",
-      period: "Année 5",
-      title: "Public partiel",
-      access: "Lecture publique",
-      desc: "Certaines fiches deviennent publiques. SEO, partage. Génération d'un Livre Blanc. Préparation finale de la conférence au Bénin.",
-      milestones: ["Livre Blanc publié", "Conférence planifiée à 100%", "Domaine monpays.plus", "Communauté lancée"],
-    },
-  ];
-
-  return (
-    <section className="py-32 px-6 lg:px-12" style={{ background: C.primaryDark, color: C.surface }}>
-      <div
-        className="absolute inset-x-0"
-        style={{ backgroundImage: `url("${adinkraPattern}")`, opacity: 0.04 }}
+      <InitiativeDialog
+        open={open}
+        onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}
+        initial={editing}
+        domains={store.domains}
+        onSave={save}
       />
-      <div className="max-w-7xl mx-auto relative">
-        <Reveal>
-          <div className="max-w-4xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-px w-10" style={{ background: C.accent }} />
-              <span
-                className="text-xs tracking-[0.3em] uppercase font-semibold"
-                style={{ fontFamily: "'JetBrains Mono', monospace", color: C.accent }}
-              >
-                03 · Trajectoire
-              </span>
-            </div>
-            <h2
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: "clamp(2rem, 4.5vw, 4rem)",
-                fontWeight: 700,
-                lineHeight: 1.05,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Trois phases. Un seul cap.
-            </h2>
-          </div>
-        </Reveal>
-
-        <div className="mt-20 space-y-8">
-          {phases.map((p, i) => (
-            <Reveal key={p.n} delay={i * 0.1}>
-              <div
-                className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-8 lg:p-12 rounded-2xl border transition-all hover:scale-[1.005]"
-                style={{
-                  background: "rgba(255,255,255,0.03)",
-                  borderColor: "rgba(212,168,83,0.2)",
-                }}
-              >
-                <div className="lg:col-span-3">
-                  <div
-                    className="text-xs tracking-[0.3em] uppercase mb-2"
-                    style={{ fontFamily: "'JetBrains Mono', monospace", color: C.accent }}
-                  >
-                    {p.n}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "'Playfair Display', serif",
-                      fontSize: "2.5rem",
-                      fontWeight: 700,
-                      color: C.surface,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {p.title}
-                  </div>
-                  <div className="mt-3 text-sm" style={{ color: C.accentSoft }}>
-                    {p.period} · {p.access}
-                  </div>
-                </div>
-                <div className="lg:col-span-5">
-                  <p className="text-base leading-relaxed" style={{ color: "rgba(250,246,241,0.8)" }}>
-                    {p.desc}
-                  </p>
-                </div>
-                <div className="lg:col-span-4">
-                  <ul className="space-y-3">
-                    {p.milestones.map((m) => (
-                      <li key={m} className="flex items-start gap-3 text-sm" style={{ color: C.surface }}>
-                        <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: C.accent }} />
-                        {m}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
+    </>
   );
 }
 
-/* -------- Stack technique -------- */
-function StackSection() {
-  const groups = [
-    {
-      icon: Palette,
-      title: "Frontend",
-      items: ["Next.js 14 (App Router)", "TypeScript", "shadcn/ui + Tailwind", "Zustand · React Query", "Tiptap · Recharts · dnd-kit", "Framer Motion"],
-    },
-    {
-      icon: Server,
-      title: "Backend",
-      items: ["NestJS · Node 20 LTS", "REST + tRPC", "NextAuth.js v5", "Prisma ORM · Zod", "Cloudinary · MeiliSearch", "Puppeteer (PDF) · xlsx"],
-    },
-    {
-      icon: Database,
-      title: "Données & infra",
-      items: ["PostgreSQL 16 · Supabase", "Redis · Upstash", "Vercel · Railway", "GitHub Actions", "Sentry monitoring", "monpays.plus"],
-    },
-  ];
-  return (
-    <section className="py-32 px-6 lg:px-12" style={{ background: C.surface }}>
-      <div className="max-w-7xl mx-auto">
-        <Reveal>
-          <SectionTitle eyebrow="04 · Stack technique" title="Choix techniques pensés pour durer." />
-        </Reveal>
+function InitiativeDialog({
+  open, onOpenChange, initial, domains, onSave,
+}: {
+  open: boolean; onOpenChange: (v: boolean) => void;
+  initial: Initiative | null; domains: Domain[];
+  onSave: (i: Initiative) => void;
+}) {
+  const blank: Initiative = {
+    id: uid(), title: "", domainId: domains[0]?.id || "", country: "", countryCode: "",
+    description: "", mechanism: "", conditions: "", obstacles: "",
+    feasibility: 5, adaptation: "", cost: "medium", timelineYears: 3,
+    status: "draft", pinned: false, sources: [], tags: [], createdAt: Date.now(),
+  };
+  const [data, setData] = useState<Initiative>(initial || blank);
+  useEffect(() => { setData(initial || { ...blank, id: uid(), createdAt: Date.now() }); /* eslint-disable-line */ }, [initial, open]);
 
-        <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
-          {groups.map((g, i) => (
-            <Reveal key={g.title} delay={i * 0.1}>
-              <div
-                className="p-8 rounded-2xl border h-full"
-                style={{ background: C.surfaceAlt, borderColor: C.border }}
-              >
-                <div
-                  className="w-12 h-12 rounded-lg flex items-center justify-center mb-6"
-                  style={{ background: C.primaryDark }}
-                >
-                  <g.icon className="w-6 h-6" style={{ color: C.accent }} />
-                </div>
-                <h3
-                  style={{
-                    fontFamily: "'DM Serif Display', serif",
-                    fontSize: "1.6rem",
-                    color: C.ink,
-                  }}
-                >
-                  {g.title}
-                </h3>
-                <ul className="mt-6 space-y-3">
-                  {g.items.map((it) => (
-                    <li
-                      key={it}
-                      className="text-sm pb-3 border-b last:border-0"
-                      style={{ color: C.ink, borderColor: C.border, fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      {it}
-                    </li>
+  const set = <K extends keyof Initiative>(k: K, v: Initiative[K]) =>
+    setData((d) => ({ ...d, [k]: v }));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="mpp-sub text-2xl">
+            {initial ? "Modifier l'initiative" : "Nouvelle initiative"}
+          </DialogTitle>
+          <DialogDescription>
+            Documente précisément. Le détail aujourd'hui = la crédibilité demain.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-2">
+          <div>
+            <Label>Titre *</Label>
+            <Input value={data.title} onChange={(e) => set("title", e.target.value)}
+              placeholder="ex: Méthode finlandaise d'évaluation des enseignants" />
+          </div>
+          <div className="grid md:grid-cols-3 gap-3">
+            <div>
+              <Label>Domaine</Label>
+              <Select value={data.domainId} onValueChange={(v) => set("domainId", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {domains.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.icon} {d.name}</SelectItem>
                   ))}
-                </ul>
-              </div>
-            </Reveal>
-          ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Pays d'origine</Label>
+              <Input value={data.country} onChange={(e) => set("country", e.target.value)}
+                placeholder="ex: Finlande" />
+            </div>
+            <div>
+              <Label>Code ISO</Label>
+              <Input value={data.countryCode} onChange={(e) => set("countryCode", e.target.value.toUpperCase().slice(0,2))}
+                placeholder="FI" className="mpp-mono uppercase" />
+            </div>
+          </div>
+
+          <div>
+            <Label>Description / résumé</Label>
+            <Textarea rows={3} value={data.description} onChange={(e) => set("description", e.target.value)} />
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-3">
+            <div>
+              <Label>Mécanisme clé du succès</Label>
+              <Textarea rows={3} value={data.mechanism} onChange={(e) => set("mechanism", e.target.value)}
+                placeholder="Qu'est-ce qui fait que ça marche ?" />
+            </div>
+            <div>
+              <Label>Conditions de réussite</Label>
+              <Textarea rows={3} value={data.conditions} onChange={(e) => set("conditions", e.target.value)}
+                placeholder="Contexte, prérequis…" />
+            </div>
+          </div>
+
+          <div>
+            <Label>Obstacles rencontrés</Label>
+            <Textarea rows={2} value={data.obstacles} onChange={(e) => set("obstacles", e.target.value)} />
+          </div>
+
+          <div>
+            <Label>Notes d'adaptation au Bénin</Label>
+            <Textarea rows={3} value={data.adaptation} onChange={(e) => set("adaptation", e.target.value)}
+              placeholder="Qu'est-ce qu'il faut changer pour notre contexte ?" />
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-3">
+            <div>
+              <Label>Faisabilité ({data.feasibility}/10)</Label>
+              <input type="range" min={1} max={10} value={data.feasibility}
+                onChange={(e) => set("feasibility", Number(e.target.value))}
+                className="w-full accent-[var(--mpp-primary)]" />
+            </div>
+            <div>
+              <Label>Coût estimé</Label>
+              <Select value={data.cost} onValueChange={(v: any) => set("cost", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(costLabel).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Durée (années)</Label>
+              <Input type="number" min={1} max={20}
+                value={data.timelineYears}
+                onChange={(e) => set("timelineYears", Number(e.target.value))} />
+            </div>
+            <div>
+              <Label>Statut</Label>
+              <Select value={data.status} onValueChange={(v: any) => set("status", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(statusLabel).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label className="flex items-center justify-between">
+              <span>Sources</span>
+              <button
+                type="button"
+                onClick={() => set("sources", [...data.sources, { url: "", title: "" }])}
+                className="text-xs underline" style={{ color: "var(--mpp-primary)" }}
+              >+ ajouter une source</button>
+            </Label>
+            <div className="space-y-2 mt-1">
+              {data.sources.map((s, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <Input value={s.title} onChange={(e) => {
+                    const arr = [...data.sources]; arr[idx] = { ...s, title: e.target.value };
+                    set("sources", arr);
+                  }} placeholder="Titre" className="flex-1" />
+                  <Input value={s.url} onChange={(e) => {
+                    const arr = [...data.sources]; arr[idx] = { ...s, url: e.target.value };
+                    set("sources", arr);
+                  }} placeholder="https://…" className="flex-1" />
+                  <Button variant="ghost" size="icon" onClick={() =>
+                    set("sources", data.sources.filter((_, i) => i !== idx))
+                  }><X className="h-4 w-4" /></Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label>Tags (séparés par virgule)</Label>
+            <Input value={data.tags.join(", ")}
+              onChange={(e) => set("tags", e.target.value.split(",").map((t) => t.trim()).filter(Boolean))}
+              placeholder="réforme, public, scalable" />
+          </div>
         </div>
-      </div>
-    </section>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button
+            onClick={() => {
+              if (!data.title.trim()) { toast.error("Le titre est requis"); return; }
+              onSave(data);
+            }}
+            style={{ background: "var(--mpp-primary)" }}
+          >
+            <Save className="h-4 w-4 mr-1" /> Enregistrer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-/* -------- KPI Roadmap -------- */
-function KPIRoadmapSection() {
-  const steps = [
-    { when: "Semaine 1", what: "Plateforme déployée, 1er domaine créé, 5 initiatives saisies" },
-    { when: "Mois 1", what: "30 initiatives documentées, roadmap complète" },
-    { when: "Mois 3", what: "100 initiatives, 20 contacts réseau, bibliothèque > 15 ressources" },
-    { when: "Mois 6", what: "200 initiatives couvrant 7 domaines, 1er rapport PDF exporté" },
-    { when: "An 2", what: "Ouverture à 3 collaborateurs, 500 initiatives" },
-    { when: "An 5", what: "Livre Blanc généré, conférence planifiée à 100%" },
-  ];
-  return (
-    <section className="py-32 px-6 lg:px-12" style={{ background: C.surfaceAlt }}>
-      <div className="max-w-5xl mx-auto">
-        <Reveal>
-          <SectionTitle eyebrow="05 · KPIs produit" title="Du premier jour à la conférence." />
-        </Reveal>
+/* ───────────────────────── Domaines ───────────────────────── */
+function DomainsView({
+  store, onChange,
+}: { store: Store; onChange: (v: Domain[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Domain | null>(null);
 
-        <div className="mt-20 relative">
-          {/* timeline line */}
-          <div
-            className="absolute left-[7px] top-2 bottom-2 w-px"
-            style={{ background: `linear-gradient(to bottom, ${C.primary}, ${C.accent})` }}
-          />
-          <div className="space-y-10">
-            {steps.map((s, i) => (
-              <Reveal key={s.when} delay={i * 0.08}>
-                <div className="flex gap-6 items-start">
-                  <div className="relative flex-shrink-0 mt-1">
-                    <Circle className="w-4 h-4 fill-current" style={{ color: C.accent }} />
-                  </div>
-                  <div className="flex-1 pb-6">
-                    <div
-                      className="text-xs tracking-[0.25em] uppercase mb-1"
-                      style={{ fontFamily: "'JetBrains Mono', monospace", color: C.primary }}
-                    >
-                      {s.when}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "'DM Serif Display', serif",
-                        fontSize: "1.25rem",
-                        color: C.ink,
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      {s.what}
+  const save = (d: Domain) => {
+    const exists = store.domains.some((x) => x.id === d.id);
+    onChange(exists ? store.domains.map((x) => x.id === d.id ? d : x) : [...store.domains, d]);
+    toast.success("Domaine enregistré");
+    setOpen(false); setEditing(null);
+  };
+  const remove = (id: ID) => {
+    onChange(store.domains.filter((d) => d.id !== id));
+    toast.success("Domaine supprimé");
+  };
+
+  return (
+    <>
+      <PageHeader
+        title="Domaines"
+        subtitle="Les secteurs sur lesquels tu observes et tu construis."
+        action={
+          <Button onClick={() => { setEditing(null); setOpen(true); }}
+            style={{ background: "var(--mpp-primary)" }}>
+            <Plus className="h-4 w-4 mr-1" /> Nouveau domaine
+          </Button>
+        }
+      />
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {store.domains.sort((a,b)=>a.priority-b.priority).map((d) => {
+          const count = store.initiatives.filter((i) => i.domainId === d.id).length;
+          const gap = count < 5;
+          return (
+            <div key={d.id} className="mpp-card p-5">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl">{d.icon}</div>
+                  <div>
+                    <div className="mpp-sub text-xl" style={{ color: d.color }}>{d.name}</div>
+                    <div className="mpp-mono text-[10px] uppercase" style={{ color: "var(--mpp-text-2)" }}>
+                      Priorité {d.priority}
                     </div>
                   </div>
                 </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
+                <div className="flex gap-1">
+                  <button onClick={() => { setEditing(d); setOpen(true); }} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => remove(d.id)} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                    <Trash2 className="h-3.5 w-3.5 text-[var(--mpp-danger)]" />
+                  </button>
+                </div>
+              </div>
+              <p className="text-sm mt-3" style={{ color: "var(--mpp-text-2)" }}>{d.description}</p>
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--mpp-border)]">
+                <span className="mpp-mono text-xs" style={{ color: "var(--mpp-text)" }}>
+                  {count} initiatives
+                </span>
+                {gap && (
+                  <span className="flex items-center gap-1 text-[11px]" style={{ color: "var(--mpp-warning)" }}>
+                    <AlertCircle className="h-3 w-3" /> Sous-documenté
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </section>
+
+      <DomainDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}
+        initial={editing} onSave={save} />
+    </>
   );
 }
 
-/* -------- Security -------- */
-function SecuritySection() {
-  const items = [
-    "Authentification email/password + 2FA optionnel",
-    "Routes protégées par middleware NextAuth",
-    "Données chiffrées at rest (Supabase)",
-    "Aucune donnée partagée sans action explicite",
-    "Export et suppression de compte (RGPD)",
-  ];
-  return (
-    <section className="py-32 px-6 lg:px-12" style={{ background: C.surface }}>
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-        <div className="lg:col-span-5">
-          <Reveal>
-            <SectionTitle eyebrow="06 · Sécurité & confidentialité" title="Un coffre-fort, pas une vitrine." />
-          </Reveal>
-          <Reveal delay={0.1}>
-            <p className="mt-8 text-lg leading-relaxed" style={{ color: C.text2 }}>
-              Ces réflexions sont stratégiques, personnelles, et parfois sensibles.
-              MonPays+ doit rester privé par défaut — et ne s'ouvrir que quand
-              tu décides, à qui tu décides.
-            </p>
-          </Reveal>
-        </div>
+function DomainDialog({
+  open, onOpenChange, initial, onSave,
+}: { open: boolean; onOpenChange: (v: boolean) => void; initial: Domain | null; onSave: (d: Domain) => void }) {
+  const blank: Domain = { id: uid(), name: "", slug: "", icon: "✦", color: "#6B3A2A", description: "", priority: 99 };
+  const [d, setD] = useState<Domain>(initial || blank);
+  useEffect(() => { setD(initial || { ...blank, id: uid() }); /* eslint-disable-line */ }, [initial, open]);
 
-        <div className="lg:col-span-7">
-          <Reveal delay={0.15}>
-            <div
-              className="p-10 rounded-2xl border"
-              style={{ background: C.surfaceAlt, borderColor: C.border }}
-            >
-              <Shield className="w-10 h-10 mb-6" style={{ color: C.primary }} />
-              <ul className="space-y-5">
-                {items.map((it) => (
-                  <li
-                    key={it}
-                    className="flex items-start gap-4 pb-5 border-b last:border-0 last:pb-0"
-                    style={{ borderColor: C.border }}
-                  >
-                    <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: C.accent }} />
-                    <span className="text-base" style={{ color: C.ink }}>
-                      {it}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="mpp-sub text-2xl">{initial ? "Modifier" : "Nouveau"} domaine</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label>Icône</Label>
+              <Input value={d.icon} onChange={(e) => setD({ ...d, icon: e.target.value })} maxLength={2} />
             </div>
-          </Reveal>
+            <div className="col-span-2">
+              <Label>Nom *</Label>
+              <Input value={d.name} onChange={(e) => setD({ ...d, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })} />
+            </div>
+          </div>
+          <div>
+            <Label>Description</Label>
+            <Textarea rows={2} value={d.description} onChange={(e) => setD({ ...d, description: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Couleur</Label>
+              <Input type="color" value={d.color} onChange={(e) => setD({ ...d, color: e.target.value })} className="h-10" />
+            </div>
+            <div>
+              <Label>Priorité</Label>
+              <Input type="number" value={d.priority} onChange={(e) => setD({ ...d, priority: Number(e.target.value) })} />
+            </div>
+          </div>
         </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button onClick={() => { if (!d.name.trim()) return toast.error("Nom requis"); onSave(d); }}
+            style={{ background: "var(--mpp-primary)" }}>Enregistrer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────────────────────── Réseau ───────────────────────── */
+function NetworkView({
+  store, onChange,
+}: { store: Store; onChange: (v: Contact[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Contact | null>(null);
+  const [filterRel, setFilterRel] = useState("all");
+
+  const filtered = store.contacts.filter((c) => filterRel === "all" || c.relationship === filterRel);
+
+  const save = (c: Contact) => {
+    const exists = store.contacts.some((x) => x.id === c.id);
+    onChange(exists ? store.contacts.map((x) => x.id === c.id ? c : x) : [c, ...store.contacts]);
+    toast.success("Contact enregistré");
+    setOpen(false); setEditing(null);
+  };
+  const remove = (id: ID) => onChange(store.contacts.filter((c) => c.id !== id));
+
+  return (
+    <>
+      <PageHeader title="Réseau" subtitle="Les personnes qui peuvent porter, financer ou amplifier."
+        action={
+          <Button onClick={() => { setEditing(null); setOpen(true); }} style={{ background: "var(--mpp-primary)" }}>
+            <Plus className="h-4 w-4 mr-1" /> Ajouter un contact
+          </Button>
+        }
+      />
+
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {["all", ...Object.keys(relLabel)].map((k) => (
+          <button key={k} onClick={() => setFilterRel(k)}
+            className="px-3 py-1.5 rounded-full text-xs border transition"
+            style={{
+              background: filterRel === k ? "var(--mpp-primary)" : "transparent",
+              color: filterRel === k ? "#fff" : "var(--mpp-text)",
+              borderColor: "var(--mpp-border)",
+            }}>
+            {k === "all" ? "Tous" : relLabel[k as keyof typeof relLabel]}
+            {" "}({k === "all" ? store.contacts.length : store.contacts.filter((c) => c.relationship === k).length})
+          </button>
+        ))}
       </div>
-    </section>
+
+      {filtered.length === 0 ? (
+        <EmptyState icon={Users} title="Aucun contact" hint="Commence à cartographier ton futur cercle." />
+      ) : (
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map((c) => (
+            <div key={c.id} className="mpp-card p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="mpp-sub text-lg">{c.name}</div>
+                  <div className="text-sm" style={{ color: "var(--mpp-text-2)" }}>{c.role}</div>
+                </div>
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="h-3 w-3"
+                      fill={i < c.potential ? "var(--mpp-accent)" : "none"}
+                      stroke="var(--mpp-accent)" />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-3 text-xs flex-wrap">
+                <Badge variant="outline" className="text-[10px]">{relLabel[c.relationship]}</Badge>
+                {c.country && <span style={{ color: "var(--mpp-text-2)" }}>· {c.country}</span>}
+              </div>
+              {c.expertise && (
+                <p className="text-xs mt-2" style={{ color: "var(--mpp-text-2)" }}>{c.expertise}</p>
+              )}
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--mpp-border)]">
+                <div className="flex gap-2 text-xs">
+                  {c.linkedin && <a href={c.linkedin} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: "var(--mpp-primary)" }}>LinkedIn</a>}
+                  {c.email && <a href={`mailto:${c.email}`} className="hover:underline" style={{ color: "var(--mpp-primary)" }}>Email</a>}
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => { setEditing(c); setOpen(true); }} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => remove(c.id)} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                    <Trash2 className="h-3.5 w-3.5 text-[var(--mpp-danger)]" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ContactDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}
+        initial={editing} onSave={save} />
+    </>
+  );
+}
+
+function ContactDialog({
+  open, onOpenChange, initial, onSave,
+}: { open: boolean; onOpenChange: (v: boolean) => void; initial: Contact | null; onSave: (c: Contact) => void }) {
+  const blank: Contact = {
+    id: uid(), name: "", role: "", expertise: "", country: "",
+    email: "", linkedin: "", relationship: "identified", potential: 3, notes: "", createdAt: Date.now(),
+  };
+  const [c, setC] = useState<Contact>(initial || blank);
+  useEffect(() => { setC(initial || { ...blank, id: uid(), createdAt: Date.now() }); /* eslint-disable-line */ }, [initial, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="mpp-sub text-2xl">{initial ? "Modifier" : "Nouveau"} contact</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Nom complet *</Label><Input value={c.name} onChange={(e) => setC({ ...c, name: e.target.value })} /></div>
+            <div><Label>Rôle / Titre</Label><Input value={c.role} onChange={(e) => setC({ ...c, role: e.target.value })} /></div>
+          </div>
+          <div><Label>Expertise</Label><Input value={c.expertise} onChange={(e) => setC({ ...c, expertise: e.target.value })} placeholder="économie, éducation…" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Pays</Label><Input value={c.country} onChange={(e) => setC({ ...c, country: e.target.value })} /></div>
+            <div>
+              <Label>Relation</Label>
+              <Select value={c.relationship} onValueChange={(v: any) => setC({ ...c, relationship: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(relLabel).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Email</Label><Input type="email" value={c.email} onChange={(e) => setC({ ...c, email: e.target.value })} /></div>
+            <div><Label>LinkedIn</Label><Input value={c.linkedin} onChange={(e) => setC({ ...c, linkedin: e.target.value })} /></div>
+          </div>
+          <div>
+            <Label>Potentiel ({c.potential}/5)</Label>
+            <input type="range" min={1} max={5} value={c.potential}
+              onChange={(e) => setC({ ...c, potential: Number(e.target.value) })}
+              className="w-full accent-[var(--mpp-accent)]" />
+          </div>
+          <div><Label>Notes</Label><Textarea rows={3} value={c.notes} onChange={(e) => setC({ ...c, notes: e.target.value })} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button onClick={() => { if (!c.name.trim()) return toast.error("Nom requis"); onSave(c); }}
+            style={{ background: "var(--mpp-primary)" }}>Enregistrer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────────────────────── Roadmap ───────────────────────── */
+function RoadmapView({
+  store, onChangeM, onChangeT,
+}: {
+  store: Store;
+  onChangeM: (v: Milestone[]) => void;
+  onChangeT: (v: Task[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Milestone | null>(null);
+
+  const grouped = useMemo(() => {
+    const byYear: Record<number, Milestone[]> = {};
+    [1, 2, 3, 4, 5].forEach((y) => byYear[y] = []);
+    store.milestones.forEach((m) => {
+      if (!byYear[m.year]) byYear[m.year] = [];
+      byYear[m.year].push(m);
+    });
+    Object.values(byYear).forEach((arr) => arr.sort((a, b) => a.quarter - b.quarter));
+    return byYear;
+  }, [store.milestones]);
+
+  const total = store.milestones.length;
+  const done = store.milestones.filter((m) => m.status === "completed").length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
+  const save = (m: Milestone) => {
+    const exists = store.milestones.some((x) => x.id === m.id);
+    onChangeM(exists ? store.milestones.map((x) => x.id === m.id ? m : x) : [...store.milestones, m]);
+    toast.success("Jalon enregistré");
+    setOpen(false); setEditing(null);
+  };
+  const removeM = (id: ID) => {
+    onChangeM(store.milestones.filter((m) => m.id !== id));
+    onChangeT(store.tasks.filter((t) => t.milestoneId !== id));
+  };
+
+  const addTask = (milestoneId: ID, title: string) => {
+    if (!title.trim()) return;
+    onChangeT([...store.tasks, { id: uid(), milestoneId, title, status: "todo", dueDate: "" }]);
+  };
+  const cycleTask = (id: ID) => {
+    const next = { todo: "in_progress", in_progress: "done", done: "todo" } as const;
+    onChangeT(store.tasks.map((t) => t.id === id ? { ...t, status: next[t.status] } : t));
+  };
+  const removeTask = (id: ID) => onChangeT(store.tasks.filter((t) => t.id !== id));
+
+  return (
+    <>
+      <PageHeader title="Roadmap" subtitle="5 ans. 4 trimestres. Une trajectoire claire."
+        action={
+          <Button onClick={() => { setEditing(null); setOpen(true); }} style={{ background: "var(--mpp-primary)" }}>
+            <Plus className="h-4 w-4 mr-1" /> Nouveau jalon
+          </Button>
+        }
+      />
+
+      <div className="mpp-card p-5 mb-8">
+        <div className="flex items-center justify-between text-sm mb-2">
+          <span className="mpp-sub text-base">Progression globale</span>
+          <span className="mpp-mono">{done}/{total} ({pct}%)</span>
+        </div>
+        <Progress value={pct} className="h-2" />
+      </div>
+
+      <div className="space-y-8">
+        {[1, 2, 3, 4, 5].map((year) => (
+          <div key={year}>
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="mpp-mono text-xs px-3 py-1.5 rounded-full"
+                style={{ background: "var(--mpp-primary-dark)", color: "var(--mpp-accent)" }}
+              >
+                ANNÉE {year}
+              </div>
+              <div className="flex-1 h-px" style={{ background: "var(--mpp-border)" }} />
+            </div>
+
+            {grouped[year].length === 0 ? (
+              <p className="text-sm italic pl-2" style={{ color: "var(--mpp-text-2)" }}>
+                Aucun jalon — ajoute-en un.
+              </p>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                {grouped[year].map((m) => {
+                  const tasks = store.tasks.filter((t) => t.milestoneId === m.id);
+                  const tDone = tasks.filter((t) => t.status === "done").length;
+                  return (
+                    <div key={m.id} className="mpp-card p-5">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="mpp-mono text-[10px] px-1.5 py-0.5 rounded"
+                              style={{ background: "var(--mpp-accent-soft)", color: "var(--mpp-primary-dark)" }}>
+                              T{m.quarter || 1}
+                            </span>
+                            <Badge variant="outline" className="text-[10px]">{milestoneStatusLabel[m.status]}</Badge>
+                          </div>
+                          <div className="mpp-sub text-lg mt-1">{m.title}</div>
+                          {m.description && (
+                            <p className="text-sm mt-1" style={{ color: "var(--mpp-text-2)" }}>{m.description}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={() => { setEditing(m); setOpen(true); }} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={() => removeM(m.id)} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                            <Trash2 className="h-3.5 w-3.5 text-[var(--mpp-danger)]" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-[var(--mpp-border)]">
+                        <div className="text-[11px] uppercase tracking-wider mb-2" style={{ color: "var(--mpp-text-2)" }}>
+                          Tâches ({tDone}/{tasks.length})
+                        </div>
+                        <ul className="space-y-1.5">
+                          {tasks.map((t) => (
+                            <li key={t.id} className="flex items-center gap-2 group">
+                              <button onClick={() => cycleTask(t.id)}>
+                                {t.status === "done" ? <CheckCircle2 className="h-4 w-4 text-[var(--mpp-success)]" /> :
+                                  t.status === "in_progress" ? <Clock className="h-4 w-4 text-[var(--mpp-warning)]" /> :
+                                  <Circle className="h-4 w-4 text-[var(--mpp-text-2)]" />}
+                              </button>
+                              <span className={"text-sm flex-1 " + (t.status === "done" ? "line-through opacity-60" : "")}
+                                style={{ color: "var(--mpp-text)" }}>{t.title}</span>
+                              <button onClick={() => removeTask(t.id)} className="opacity-0 group-hover:opacity-100">
+                                <X className="h-3 w-3 text-[var(--mpp-text-2)]" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                        <AddTaskInline onAdd={(t) => addTask(m.id, t)} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <MilestoneDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}
+        initial={editing} onSave={save} />
+    </>
+  );
+}
+
+function AddTaskInline({ onAdd }: { onAdd: (t: string) => void }) {
+  const [v, setV] = useState("");
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); onAdd(v); setV(""); }}
+      className="flex gap-2 mt-2"
+    >
+      <Input value={v} onChange={(e) => setV(e.target.value)}
+        placeholder="+ Ajouter une tâche…" className="h-8 text-sm" />
+    </form>
+  );
+}
+
+function MilestoneDialog({
+  open, onOpenChange, initial, onSave,
+}: { open: boolean; onOpenChange: (v: boolean) => void; initial: Milestone | null; onSave: (m: Milestone) => void }) {
+  const blank: Milestone = { id: uid(), title: "", description: "", year: 1, quarter: 1, status: "planned" };
+  const [m, setM] = useState<Milestone>(initial || blank);
+  useEffect(() => { setM(initial || { ...blank, id: uid() }); /* eslint-disable-line */ }, [initial, open]);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="mpp-sub text-2xl">{initial ? "Modifier" : "Nouveau"} jalon</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div><Label>Titre *</Label><Input value={m.title} onChange={(e) => setM({ ...m, title: e.target.value })} /></div>
+          <div><Label>Description</Label><Textarea rows={2} value={m.description} onChange={(e) => setM({ ...m, description: e.target.value })} /></div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label>Année</Label>
+              <Select value={String(m.year)} onValueChange={(v) => setM({ ...m, year: Number(v) })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1,2,3,4,5].map((y) => <SelectItem key={y} value={String(y)}>An {y}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Trimestre</Label>
+              <Select value={String(m.quarter)} onValueChange={(v) => setM({ ...m, quarter: Number(v) })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1,2,3,4].map((q) => <SelectItem key={q} value={String(q)}>T{q}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Statut</Label>
+              <Select value={m.status} onValueChange={(v: any) => setM({ ...m, status: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(milestoneStatusLabel).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button onClick={() => { if (!m.title.trim()) return toast.error("Titre requis"); onSave(m); }}
+            style={{ background: "var(--mpp-primary)" }}>Enregistrer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────────────────────── Bibliothèque ───────────────────────── */
+function LibraryView({ store, onChange }: { store: Store; onChange: (v: LibraryItem[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<LibraryItem | null>(null);
+  const [filter, setFilter] = useState<"all" | "read" | "unread">("all");
+
+  const items = store.library.filter((x) =>
+    filter === "all" ? true : filter === "read" ? x.isRead : !x.isRead
+  );
+
+  const save = (x: LibraryItem) => {
+    const exists = store.library.some((y) => y.id === x.id);
+    onChange(exists ? store.library.map((y) => y.id === x.id ? x : y) : [x, ...store.library]);
+    toast.success("Ressource enregistrée");
+    setOpen(false); setEditing(null);
+  };
+  const toggleRead = (id: ID) =>
+    onChange(store.library.map((x) => x.id === id ? { ...x, isRead: !x.isRead } : x));
+  const remove = (id: ID) => onChange(store.library.filter((x) => x.id !== id));
+
+  return (
+    <>
+      <PageHeader title="Bibliothèque" subtitle="Tout ce que tu lis, écoutes, regardes — et ce que tu en retiens."
+        action={
+          <Button onClick={() => { setEditing(null); setOpen(true); }} style={{ background: "var(--mpp-primary)" }}>
+            <Plus className="h-4 w-4 mr-1" /> Nouvelle ressource
+          </Button>
+        }
+      />
+
+      <div className="flex gap-2 mb-6">
+        {(["all", "unread", "read"] as const).map((k) => (
+          <button key={k} onClick={() => setFilter(k)}
+            className="px-3 py-1.5 rounded-full text-xs border"
+            style={{
+              background: filter === k ? "var(--mpp-primary)" : "transparent",
+              color: filter === k ? "#fff" : "var(--mpp-text)",
+              borderColor: "var(--mpp-border)",
+            }}>
+            {k === "all" ? "Tout" : k === "read" ? "Lu" : "Non lu"}
+          </button>
+        ))}
+      </div>
+
+      {items.length === 0 ? (
+        <EmptyState icon={BookOpen} title="Bibliothèque vide" hint="Ajoute ton premier livre, rapport ou podcast." />
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {items.map((x) => {
+            const domain = store.domains.find((d) => d.id === x.domainId);
+            return (
+              <div key={x.id} className="mpp-card p-5 flex flex-col">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="mpp-sub text-base leading-snug">{x.title}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--mpp-text-2)" }}>
+                      {x.author || "—"} · <span className="capitalize">{x.type}</span>
+                    </div>
+                  </div>
+                  <button onClick={() => toggleRead(x.id)}>
+                    {x.isRead ? <CheckCircle2 className="h-5 w-5 text-[var(--mpp-success)]" /> : <Circle className="h-5 w-5 text-[var(--mpp-text-2)]" />}
+                  </button>
+                </div>
+                {domain && (
+                  <div className="text-xs mt-2">
+                    <span className="px-2 py-0.5 rounded" style={{ background: domain.color + "1a", color: domain.color }}>
+                      {domain.icon} {domain.name}
+                    </span>
+                  </div>
+                )}
+                {x.lessons && (
+                  <p className="text-sm mt-3 italic line-clamp-3" style={{ color: "var(--mpp-text-2)" }}>
+                    « {x.lessons} »
+                  </p>
+                )}
+                <div className="mt-auto flex items-center justify-between pt-4 border-t border-[var(--mpp-border)]">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="h-3 w-3"
+                        fill={i < x.rating ? "var(--mpp-accent)" : "none"}
+                        stroke="var(--mpp-accent)" />
+                    ))}
+                  </div>
+                  <div className="flex gap-1">
+                    {x.url && (
+                      <a href={x.url} target="_blank" rel="noreferrer" className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                    <button onClick={() => { setEditing(x); setOpen(true); }} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                      <Edit3 className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => remove(x.id)} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                      <Trash2 className="h-3.5 w-3.5 text-[var(--mpp-danger)]" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <LibraryDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}
+        initial={editing} domains={store.domains} onSave={save} />
+    </>
+  );
+}
+
+function LibraryDialog({
+  open, onOpenChange, initial, domains, onSave,
+}: { open: boolean; onOpenChange: (v: boolean) => void; initial: LibraryItem | null; domains: Domain[]; onSave: (x: LibraryItem) => void }) {
+  const blank: LibraryItem = {
+    id: uid(), title: "", author: "", type: "book", domainId: domains[0]?.id || "",
+    url: "", summary: "", lessons: "", rating: 0, isRead: false, createdAt: Date.now(),
+  };
+  const [x, setX] = useState<LibraryItem>(initial || blank);
+  useEffect(() => { setX(initial || { ...blank, id: uid(), createdAt: Date.now() }); /* eslint-disable-line */ }, [initial, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="mpp-sub text-2xl">{initial ? "Modifier" : "Nouvelle"} ressource</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div><Label>Titre *</Label><Input value={x.title} onChange={(e) => setX({ ...x, title: e.target.value })} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Auteur</Label><Input value={x.author} onChange={(e) => setX({ ...x, author: e.target.value })} /></div>
+            <div>
+              <Label>Type</Label>
+              <Select value={x.type} onValueChange={(v: any) => setX({ ...x, type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["book","article","report","video","podcast","documentary","other"].map((t) =>
+                    <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Domaine</Label>
+              <Select value={x.domainId} onValueChange={(v) => setX({ ...x, domainId: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {domains.map((d) => <SelectItem key={d.id} value={d.id}>{d.icon} {d.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label>URL</Label><Input value={x.url} onChange={(e) => setX({ ...x, url: e.target.value })} /></div>
+          </div>
+          <div><Label>Résumé</Label><Textarea rows={2} value={x.summary} onChange={(e) => setX({ ...x, summary: e.target.value })} /></div>
+          <div><Label>Leçons applicables au Bénin</Label><Textarea rows={3} value={x.lessons} onChange={(e) => setX({ ...x, lessons: e.target.value })} /></div>
+          <div className="grid grid-cols-2 gap-3 items-end">
+            <div>
+              <Label>Note ({x.rating}/5)</Label>
+              <input type="range" min={0} max={5} value={x.rating}
+                onChange={(e) => setX({ ...x, rating: Number(e.target.value) })}
+                className="w-full accent-[var(--mpp-accent)]" />
+            </div>
+            <div className="flex items-center gap-2 pb-2">
+              <input type="checkbox" id="isread" checked={x.isRead} onChange={(e) => setX({ ...x, isRead: e.target.checked })} />
+              <Label htmlFor="isread">Marquer comme lu</Label>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button onClick={() => { if (!x.title.trim()) return toast.error("Titre requis"); onSave(x); }}
+            style={{ background: "var(--mpp-primary)" }}>Enregistrer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────────────────────── Journal ───────────────────────── */
+function JournalView({ store, onChange }: { store: Store; onChange: (v: JournalEntry[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<JournalEntry | null>(null);
+  const [q, setQ] = useState("");
+
+  const entries = store.journal
+    .filter((e) => !q || (e.title + " " + e.content).toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  const save = (e: JournalEntry) => {
+    const exists = store.journal.some((x) => x.id === e.id);
+    onChange(exists ? store.journal.map((x) => x.id === e.id ? e : x) : [e, ...store.journal]);
+    toast.success("Entrée enregistrée");
+    setOpen(false); setEditing(null);
+  };
+  const remove = (id: ID) => onChange(store.journal.filter((e) => e.id !== id));
+
+  const moodColor = {
+    motivated: "var(--mpp-accent)", reflective: "var(--mpp-primary-light)",
+    doubtful: "var(--mpp-warning)", energized: "var(--mpp-success)", focused: "var(--mpp-primary-dark)",
+  } as const;
+
+  return (
+    <>
+      <PageHeader title="Journal stratégique" subtitle="Tes réflexions, doutes, décisions. À relire dans 5 ans."
+        action={
+          <Button onClick={() => { setEditing(null); setOpen(true); }} style={{ background: "var(--mpp-primary)" }}>
+            <Plus className="h-4 w-4 mr-1" /> Nouvelle entrée
+          </Button>
+        }
+      />
+
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--mpp-text-2)]" />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher dans le journal…" className="pl-9" />
+      </div>
+
+      {entries.length === 0 ? (
+        <EmptyState icon={NotebookPen} title="Journal vide" hint="Commence par noter ta première intuition." />
+      ) : (
+        <div className="space-y-4">
+          {entries.map((e) => (
+            <div key={e.id} className="mpp-card p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 text-xs" style={{ color: "var(--mpp-text-2)" }}>
+                    <span>{fmt(e.createdAt)}</span>
+                    <span className="px-2 py-0.5 rounded mpp-mono text-[10px] uppercase"
+                      style={{ background: moodColor[e.mood] + "26", color: moodColor[e.mood] }}>
+                      {e.mood}
+                    </span>
+                  </div>
+                  {e.title && <div className="mpp-sub text-xl mt-1">{e.title}</div>}
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => { setEditing(e); setOpen(true); }} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => remove(e.id)} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                    <Trash2 className="h-3.5 w-3.5 text-[var(--mpp-danger)]" />
+                  </button>
+                </div>
+              </div>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed" style={{ color: "var(--mpp-text)" }}>
+                {e.content}
+              </p>
+              {e.tags && (
+                <div className="flex gap-1 mt-3 flex-wrap">
+                  {e.tags.split(",").filter((t) => t.trim()).map((t) => (
+                    <span key={t} className="text-[10px] px-2 py-0.5 rounded" style={{ background: "var(--mpp-surface-alt)", color: "var(--mpp-text-2)" }}>
+                      #{t.trim()}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <JournalDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}
+        initial={editing} onSave={save} />
+    </>
+  );
+}
+
+function JournalDialog({
+  open, onOpenChange, initial, onSave,
+}: { open: boolean; onOpenChange: (v: boolean) => void; initial: JournalEntry | null; onSave: (e: JournalEntry) => void }) {
+  const blank: JournalEntry = {
+    id: uid(), title: "", content: "", mood: "reflective", tags: "", createdAt: Date.now(),
+  };
+  const [e, setE] = useState<JournalEntry>(initial || blank);
+  useEffect(() => { setE(initial || { ...blank, id: uid(), createdAt: Date.now() }); /* eslint-disable-line */ }, [initial, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="mpp-sub text-2xl">{initial ? "Modifier" : "Nouvelle"} entrée</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div><Label>Titre</Label><Input value={e.title} onChange={(ev) => setE({ ...e, title: ev.target.value })} /></div>
+          <div>
+            <Label>Humeur</Label>
+            <Select value={e.mood} onValueChange={(v: any) => setE({ ...e, mood: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {["motivated","reflective","doubtful","energized","focused"].map((m) =>
+                  <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label>Contenu</Label><Textarea rows={10} value={e.content} onChange={(ev) => setE({ ...e, content: ev.target.value })} /></div>
+          <div><Label>Tags</Label><Input value={e.tags} onChange={(ev) => setE({ ...e, tags: ev.target.value })} placeholder="vision, doute, idée…" /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button onClick={() => onSave(e)} style={{ background: "var(--mpp-primary)" }}>Enregistrer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────────────────────── Conférence ───────────────────────── */
+function ConferenceView({ store, onChange }: { store: Store; onChange: (v: ConferenceSession[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<ConferenceSession | null>(null);
+
+  const save = (s: ConferenceSession) => {
+    const exists = store.sessions.some((x) => x.id === s.id);
+    onChange(exists ? store.sessions.map((x) => x.id === s.id ? s : x) : [...store.sessions, s]);
+    toast.success("Session enregistrée");
+    setOpen(false); setEditing(null);
+  };
+  const remove = (id: ID) => onChange(store.sessions.filter((s) => s.id !== id));
+
+  const total = store.sessions.length;
+  const finalized = store.sessions.filter((s) => s.status === "finalized").length;
+  const totalMin = store.sessions.reduce((a, b) => a + (b.duration || 0), 0);
+
+  return (
+    <>
+      <PageHeader title="Conférence" subtitle="Le rendez-vous final. Programme, intervenants, propositions."
+        action={
+          <Button onClick={() => { setEditing(null); setOpen(true); }} style={{ background: "var(--mpp-primary)" }}>
+            <Plus className="h-4 w-4 mr-1" /> Nouvelle session
+          </Button>
+        }
+      />
+
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <Stat label="Sessions" value={total} />
+        <Stat label="Finalisées" value={`${finalized}/${total}`} />
+        <Stat label="Durée totale" value={`${Math.floor(totalMin/60)}h${(totalMin%60).toString().padStart(2,"0")}`} />
+      </div>
+
+      {store.sessions.length === 0 ? (
+        <EmptyState icon={Mic2} title="Aucune session" hint="Imagine déjà le programme — keynotes, panels, ateliers." />
+      ) : (
+        <div className="space-y-3">
+          {store.sessions.map((s, idx) => {
+            const domain = store.domains.find((d) => d.id === s.domainId);
+            return (
+              <div key={s.id} className="mpp-card p-5 flex items-center gap-4">
+                <div className="mpp-mono text-2xl" style={{ color: "var(--mpp-accent)" }}>
+                  {String(idx + 1).padStart(2, "0")}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="outline" className="text-[10px] uppercase">{s.type}</Badge>
+                    <Badge variant="outline" className="text-[10px]">{s.status}</Badge>
+                    {domain && <span className="text-xs" style={{ color: domain.color }}>{domain.icon} {domain.name}</span>}
+                  </div>
+                  <div className="mpp-sub text-lg">{s.title}</div>
+                  {s.description && <p className="text-sm" style={{ color: "var(--mpp-text-2)" }}>{s.description}</p>}
+                </div>
+                <div className="mpp-mono text-sm" style={{ color: "var(--mpp-text-2)" }}>
+                  {s.duration} min
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => { setEditing(s); setOpen(true); }} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => remove(s.id)} className="p-1.5 hover:bg-[var(--mpp-surface-alt)] rounded">
+                    <Trash2 className="h-3.5 w-3.5 text-[var(--mpp-danger)]" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <SessionDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}
+        initial={editing} domains={store.domains} onSave={save} />
+    </>
+  );
+}
+
+function SessionDialog({
+  open, onOpenChange, initial, domains, onSave,
+}: { open: boolean; onOpenChange: (v: boolean) => void; initial: ConferenceSession | null; domains: Domain[]; onSave: (s: ConferenceSession) => void }) {
+  const blank: ConferenceSession = {
+    id: uid(), title: "", description: "", type: "presentation", duration: 30,
+    domainId: domains[0]?.id || "", status: "idea", speakerIds: [],
+  };
+  const [s, setS] = useState<ConferenceSession>(initial || blank);
+  useEffect(() => { setS(initial || { ...blank, id: uid() }); /* eslint-disable-line */ }, [initial, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="mpp-sub text-2xl">{initial ? "Modifier" : "Nouvelle"} session</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div><Label>Titre *</Label><Input value={s.title} onChange={(e) => setS({ ...s, title: e.target.value })} /></div>
+          <div><Label>Description</Label><Textarea rows={3} value={s.description} onChange={(e) => setS({ ...s, description: e.target.value })} /></div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label>Type</Label>
+              <Select value={s.type} onValueChange={(v: any) => setS({ ...s, type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["keynote","panel","workshop","presentation"].map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Durée (min)</Label>
+              <Input type="number" value={s.duration} onChange={(e) => setS({ ...s, duration: Number(e.target.value) })} />
+            </div>
+            <div>
+              <Label>Statut</Label>
+              <Select value={s.status} onValueChange={(v: any) => setS({ ...s, status: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["idea","confirmed","finalized"].map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label>Domaine</Label>
+            <Select value={s.domainId} onValueChange={(v) => setS({ ...s, domainId: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {domains.map((d) => <SelectItem key={d.id} value={d.id}>{d.icon} {d.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button onClick={() => { if (!s.title.trim()) return toast.error("Titre requis"); onSave(s); }}
+            style={{ background: "var(--mpp-primary)" }}>Enregistrer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────────────────────── Search ───────────────────────── */
+function SearchView({ store, onJump }: { store: Store; onJump: (t: Tab) => void }) {
+  const [q, setQ] = useState("");
+  const ql = q.toLowerCase().trim();
+
+  const results = useMemo(() => {
+    if (!ql) return [];
+    const hits: { type: string; label: string; sub: string; tab: Tab }[] = [];
+    store.initiatives.forEach((i) => {
+      if ((i.title + " " + i.description + " " + i.country).toLowerCase().includes(ql))
+        hits.push({ type: "Initiative", label: i.title, sub: i.country, tab: "initiatives" });
+    });
+    store.contacts.forEach((c) => {
+      if ((c.name + " " + c.role + " " + c.expertise).toLowerCase().includes(ql))
+        hits.push({ type: "Contact", label: c.name, sub: c.role, tab: "network" });
+    });
+    store.library.forEach((x) => {
+      if ((x.title + " " + x.author + " " + x.lessons).toLowerCase().includes(ql))
+        hits.push({ type: "Ressource", label: x.title, sub: x.author, tab: "library" });
+    });
+    store.journal.forEach((e) => {
+      if ((e.title + " " + e.content).toLowerCase().includes(ql))
+        hits.push({ type: "Journal", label: e.title || "Entrée", sub: fmt(e.createdAt), tab: "journal" });
+    });
+    store.milestones.forEach((m) => {
+      if ((m.title + " " + m.description).toLowerCase().includes(ql))
+        hits.push({ type: "Jalon", label: m.title, sub: `An ${m.year}`, tab: "roadmap" });
+    });
+    return hits;
+  }, [ql, store]);
+
+  return (
+    <>
+      <PageHeader title="Recherche globale" subtitle="Tout MonPays+ en une recherche." />
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--mpp-text-2)]" />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} autoFocus
+          placeholder="Rechercher dans toutes les entités…" className="pl-10 h-12 text-base" />
+      </div>
+
+      {!ql ? (
+        <p className="text-sm" style={{ color: "var(--mpp-text-2)" }}>
+          Commence à taper pour rechercher dans initiatives, contacts, ressources, journal et jalons.
+        </p>
+      ) : results.length === 0 ? (
+        <EmptyState icon={Search} title="Aucun résultat" hint={`Aucune correspondance pour « ${q} ».`} />
+      ) : (
+        <div className="space-y-2">
+          {results.map((r, idx) => (
+            <button key={idx} onClick={() => onJump(r.tab)}
+              className="mpp-card w-full p-4 text-left flex items-center justify-between hover:border-[var(--mpp-primary)] transition">
+              <div>
+                <div className="text-[10px] uppercase mpp-mono" style={{ color: "var(--mpp-accent)" }}>{r.type}</div>
+                <div className="mpp-sub text-base" style={{ color: "var(--mpp-text)" }}>{r.label}</div>
+                <div className="text-xs" style={{ color: "var(--mpp-text-2)" }}>{r.sub}</div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-[var(--mpp-text-2)]" />
+            </button>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
