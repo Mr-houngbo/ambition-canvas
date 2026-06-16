@@ -15,6 +15,7 @@ import ProjetHouefa from "./pages/ProjetHouefa";
 import VisionEducation from "./pages/VisionEducation";
 import Daho from "./pages/Daho";
 import MonPaysPlus from "./pages/MonPaysPlus";
+import Perseus from "./pages/Perseus";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 
@@ -41,6 +42,7 @@ const AuthenticatedApp = () => {
         <Route path="/vision-education" element={<VisionEducation />} />
         <Route path="/daho" element={<Daho />} />
         <Route path="/monpays-plus" element={<MonPaysPlus />} />
+        <Route path="/perseus" element={<Perseus />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
