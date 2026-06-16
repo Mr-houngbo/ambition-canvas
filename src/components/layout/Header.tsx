@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, Briefcase, GraduationCap, Share2, LogOut, Building2, Lightbulb, Rocket, Globe2 } from 'lucide-react';
+import { Sparkles, Briefcase, GraduationCap, Share2, LogOut, Building2, Lightbulb, Rocket, Globe2, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/hooks/useSimpleAuth';
@@ -16,6 +16,7 @@ const Header = () => {
     { path: '/vision-education', label: 'Vision Édu', icon: Lightbulb, color: 'vision' },
     { path: '/daho', label: 'Daho', icon: Rocket, color: 'daho' },
     { path: '/monpays-plus', label: 'MonPays+', icon: Globe2, color: 'monpays' },
+    { path: '/perseus', label: 'Perseus', icon: Shield, color: 'perseus' },
     { path: '/portfolio', label: 'Portfolio', icon: Share2, color: 'accent' },
   ];
 
@@ -59,6 +60,8 @@ const Header = () => {
                         ? "bg-orange-500/10 text-orange-600"
                         : link.color === 'monpays'
                         ? "bg-[#C56A3E]/10 text-[#8E3B1F]"
+                        : link.color === 'perseus'
+                        ? "bg-[#F5C76A]/15 text-[#8B6914]"
                         : (link.color === 'houefa' || link.color === 'vision')
                         ? "bg-emerald-500/10 text-emerald-600"
                         : "bg-primary/10 text-primary"
@@ -74,7 +77,7 @@ const Header = () => {
                       layoutId="nav-indicator"
                       className={cn(
                         "absolute -bottom-0.5 left-3 right-3 h-0.5 rounded-full",
-                        link.color === 'academic' ? "bg-academic" : link.color === 'accent' ? "bg-accent" : link.color === 'daho' ? "bg-orange-500" : link.color === 'monpays' ? "bg-[#C56A3E]" : (link.color === 'houefa' || link.color === 'vision') ? "bg-emerald-500" : "bg-primary"
+                        link.color === 'academic' ? "bg-academic" : link.color === 'accent' ? "bg-accent" : link.color === 'daho' ? "bg-orange-500" : link.color === 'monpays' ? "bg-[#C56A3E]" : link.color === 'perseus' ? "bg-[#C9A24C]" : (link.color === 'houefa' || link.color === 'vision') ? "bg-emerald-500" : "bg-primary"
                       )}
                       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                     />
